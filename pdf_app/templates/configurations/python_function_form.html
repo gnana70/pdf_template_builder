@@ -106,7 +106,7 @@
                             Python Function Code
                         </label>
                         <div class="mt-1">
-                            <textarea id="code-editor" name="function_code">{{ form.function_code.value|default:"def main():\n    # Your code here\n    return 'Hello World!'" }}</textarea>
+                            <textarea id="code-editor" name="function_code">{{ form.function_code.value|default:"def process_data(input_data):\n    # Your code here\n    return 'Processed: ' + str(input_data)" }}</textarea>
                         </div>
                         <div id="lintErrors" class="mt-2 hidden">
                             <h4 class="text-sm font-medium text-red-700">Linting Issues:</h4>
@@ -129,12 +129,11 @@
                                 <textarea id="function-args" rows="3">
 # Define parameters and execution code here
 # Example 1: Call with parameters
-# result = main(1, 2)
+# result = process_data("Hello World")
 #
 # Example 2: Set variables and call with them
-# a = 10
-# b = 20
-# result = main(a, b)
+# data = "Sample text"
+# result = process_data(data)
 </textarea>
                             </div>
                             <p class="mt-1 text-sm text-gray-500">Define your parameters and store the function result in a 'result' variable to see the return value.</p>
@@ -347,11 +346,6 @@
             // Simple checks
             if (code.includes('import os') || code.includes('import sys')) {
                 errors.push('Security warning: Importing system modules is restricted');
-            }
-            
-            // Check for def main
-            if (!code.includes('def main')) {
-                errors.push('Warning: No "main" function defined. Function should contain a main() function.');
             }
 
             // Update UI

@@ -247,9 +247,6 @@ def run_pylint(code):
     if "__import__" in code:
         errors.append("Security warning: Dynamic imports using '__import__' are restricted")
     
-    if not "def main" in code:
-        errors.append("Warning: No 'main' function defined. Please define a main() function as the entry point.")
-    
     return errors
 
 

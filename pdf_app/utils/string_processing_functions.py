@@ -2,8 +2,6 @@
 String processing utility functions for template extraction.
 These functions process input strings and return modified strings based on specific patterns.
 """
-import re
-import datetime
 
 
 def extract_uppercase_words(input_string):
@@ -23,6 +21,8 @@ def extract_uppercase_words(input_string):
         - Words with mixed case (e.g., "JavaScript")
         - Words with numbers or special characters (e.g., "NASA2023")
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -51,6 +51,8 @@ def extract_integers(input_string):
         - Words with alphanumeric characters (e.g., "123ABC")
         - Words with special characters (e.g., "$100")
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -78,6 +80,8 @@ def extract_capitalized_words(input_string):
         - All uppercase words (still included, but might not be what you want)
         - Words starting with lowercase (e.g., "apple")
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -105,6 +109,8 @@ def extract_float_values(input_string):
         - Integer values without decimal points (e.g., "123")
         - Numbers with commas as decimal separators (e.g., "123,45")
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -128,19 +134,37 @@ def extract_float_values_with_comma(input_string):
     Works with:
         - Numbers with decimal points (e.g., "123.45")
         - Numbers with commas as decimal separators (e.g., "123,45")
+        - Numbers with comma as thousands separators and dot as decimal (e.g., "1,234.56")
         
     Doesn't work with:
         - Integer values without decimal separators (e.g., "123")
-        - Numbers with both comma and dot for different purposes (e.g., "1,234.56")
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
-    # Match floating point numbers with either dot or comma as decimal separator
-    pattern = r'\b\d+[.,]\d+\b'
-    matches = re.findall(pattern, input_string)
+    # Match different number formats:
+    # 1. Standard decimal point format: 123.45
+    # 2. Comma as decimal separator: 123,45
+    # 3. Comma as thousands separator and dot as decimal: 1,234.56
+    patterns = [
+        r'\b\d+\.\d+\b',                     # Standard decimal point (123.45)
+        r'\b\d+,\d+\b',                      # Comma as decimal (123,45)
+        r'\b\d{1,3}(,\d{3})+\.\d+\b'         # Comma as thousands sep with decimal (1,234.56)
+    ]
     
-    return " ".join(matches)
+    # Combine all patterns with OR
+    combined_pattern = '|'.join(patterns)
+    matches = re.findall(combined_pattern, input_string)
+    
+    # For the third pattern, matches will contain tuples with the last comma group
+    # We need to extract the full matches
+    all_matches = []
+    for match in re.finditer(combined_pattern, input_string):
+        all_matches.append(match.group(0))
+    
+    return " ".join(all_matches)
 
 
 def extract_alphanumeric_words(input_string):
@@ -159,6 +183,8 @@ def extract_alphanumeric_words(input_string):
     Doesn't work with:
         - Words containing special characters (e.g., "User@123", "test-123")
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -189,6 +215,9 @@ def extract_dates(input_string):
         - Dates without year (e.g., "25/04")
         - Non-standard date formats
     """
+    import re
+    import datetime
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -226,6 +255,9 @@ def convert_date_format(input_string):
         - Dates without year (e.g., "25/04")
         - Non-standard date formats
     """
+    import re
+    import datetime
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -304,6 +336,8 @@ def remove_special_characters(input_string):
         - Alphanumeric characters (letters and numbers)
         - Spaces
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -329,6 +363,8 @@ def extract_words_starting_with_number(input_string):
     Doesn't work with:
         - Words not starting with a number (e.g., "Day100")
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -355,6 +391,8 @@ def extract_words_ending_with_number(input_string):
     Doesn't work with:
         - Words not ending with a number (e.g., "3Data")
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -478,6 +516,8 @@ def remove_punctuation(input_string):
         - This function removes standard punctuation characters but retains
           alphanumeric characters, spaces, and other symbols
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -503,6 +543,8 @@ def normalize_spaces(input_string):
     Note:
         - This function preserves a single space between words but removes extra spaces
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -530,6 +572,8 @@ def standardize_whitespace(input_string):
         - This function removes all leading and trailing whitespace
         - This function replaces multiple consecutive spaces with a single space
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     
@@ -558,6 +602,8 @@ def format_numeric_values(input_string, decimal_places=2):
         - Non-numeric strings
         - Numbers with commas as thousands separators (e.g., "1,234")
     """
+    import re
+    
     if not input_string or not isinstance(input_string, str):
         return ""
     

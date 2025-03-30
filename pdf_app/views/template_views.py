@@ -9,11 +9,46 @@ import os
 import fitz  # PyMuPDF
 from django.conf import settings
 import tempfile
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 @login_required
 def template_list(request):
+    # Get filters from query parameters
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    
+    # Base queryset
     templates = Template.objects.filter(created_by=request.user)
-    return render(request, 'templates/list.html', {'templates': templates})
+    
+    # Apply filters
+    if search_query:
+        templates = templates.filter(
+            Q(name__icontains=search_query) | 
+            Q(description__icontains=search_query)
+        )
+    
+    if status_filter:
+        templates = templates.filter(status=status_filter)
+    
+    # Order by updated_at
+    templates = templates.order_by('-updated_at')
+    
+    # Pagination
+    paginator = Paginator(templates, 10)  # Show 10 templates per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'templates': page_obj,
+        'page_obj': page_obj,
+        'is_paginated': paginator.num_pages > 1,
+        'paginator': paginator,
+        'search_query': search_query,
+        'status_filter': status_filter
+    }
+    
+    return render(request, 'templates/list.html', context)
 
 @login_required
 def template_create(request):
