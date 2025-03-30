@@ -17,6 +17,7 @@ from pdf_app.serializers import PythonFunctionSerializer
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from urllib.parse import urlencode
+from django.db.models import Q
 
 
 class PythonFunctionListView(LoginRequiredMixin, ListView):
@@ -24,6 +25,24 @@ class PythonFunctionListView(LoginRequiredMixin, ListView):
     template_name = 'configurations/python_function_list.html'
     context_object_name = 'python_functions'
     paginate_by = 10  # Add pagination with 10 items per page
+    
+    def get_queryset(self):
+        queryset = PythonFunction.objects.all()
+        
+        # Get search query from request
+        search_query = self.request.GET.get('search', '')
+        
+        # Apply search filter if provided
+        if search_query:
+            queryset = queryset.filter(
+                Q(name__icontains=search_query) | 
+                Q(description__icontains=search_query)
+            )
+            
+        # Order by updated_at (most recent first)
+        queryset = queryset.order_by('-updated_at')
+        
+        return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -33,6 +52,9 @@ class PythonFunctionListView(LoginRequiredMixin, ListView):
         target = self.request.GET.get('target')
         config_id = self.request.GET.get('config_id')
         template_id = self.request.GET.get('template_id')
+        
+        # Add search query to context for form repopulation
+        context['search_query'] = self.request.GET.get('search', '')
         
         if mode == 'select' and return_url:
             context['select_mode'] = True

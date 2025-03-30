@@ -49,7 +49,9 @@ def configuration_list(request):
         'configurations': page_obj,
         'page_obj': page_obj,
         'is_paginated': paginator.num_pages > 1,
-        'paginator': paginator
+        'paginator': paginator,
+        'search_query': search_query,
+        'status_filter': status_filter
     }
     
     return render(request, 'configurations/list.html', context)
