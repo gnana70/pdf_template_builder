@@ -1,0 +1,183 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Run Configuration: {{ configuration.name }} | PDF Template Builder{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Run Configuration</h1>
+            <p class="mt-1 text-sm text-gray-500">{{ configuration.name }}</p>
+        </div>
+        <div>
+            <a href="{% url 'configuration_detail' configuration.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Configuration
+            </a>
+        </div>
+    </div>
+    
+    <div class="border-t border-gray-200 px-4 py-5 sm:p-6">
+        <div class="max-w-3xl mx-auto">
+            <!-- Configuration Info -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <h2 class="text-lg font-medium text-gray-900">Configuration Information</h2>
+                <dl class="mt-4 grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Template</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ configuration.template.name }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Status</dt>
+                        <dd class="mt-1 text-sm">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if configuration.status == 'draft' %}bg-yellow-100 text-yellow-800
+                                {% elif configuration.status == 'active' %}bg-green-100 text-green-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ configuration.get_status_display }}
+                            </span>
+                        </dd>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <dt class="text-sm font-medium text-gray-500">Description</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ configuration.description|default:"No description provided" }}</dd>
+                    </div>
+                </dl>
+            </div>
+            
+            <!-- Upload PDF Form -->
+            <form method="post" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                
+                {% if form.errors %}
+                <div class="rounded-md bg-red-50 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">
+                                There were errors with your submission
+                            </h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    {% for field in form %}
+                                        {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                    {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
+                    <div class="space-y-2">
+                        <i class="fas fa-file-pdf text-gray-400 text-5xl mb-3"></i>
+                        <div class="flex text-sm text-gray-600">
+                            <label for="document-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                <span>Upload a PDF document</span>
+                                {{ form.document }}
+                            </label>
+                            <p class="pl-1">or drag and drop</p>
+                        </div>
+                        <p class="text-xs text-gray-500">PDF up to 10MB</p>
+                    </div>
+                    <div id="file-preview" class="hidden mt-4 p-3 bg-gray-50 rounded-md text-sm text-gray-700 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-file-pdf text-indigo-500 mr-2"></i>
+                            <span id="file-name">No file selected</span>
+                        </div>
+                        <button type="button" id="remove-file" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end">
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Process Document <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('document-upload');
+        const filePreview = document.getElementById('file-preview');
+        const fileName = document.getElementById('file-name');
+        const removeFile = document.getElementById('remove-file');
+        const dropZone = document.querySelector('.border-dashed');
+        
+        // Handle file selection
+        fileInput.addEventListener('change', function() {
+            updateFilePreview();
+        });
+        
+        // Remove selected file
+        removeFile.addEventListener('click', function() {
+            fileInput.value = '';
+            filePreview.classList.add('hidden');
+        });
+        
+        // Drag and drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+        
+        dropZone.addEventListener('drop', handleDrop, false);
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function highlight() {
+            dropZone.classList.add('bg-gray-50');
+            dropZone.classList.add('border-indigo-300');
+        }
+        
+        function unhighlight() {
+            dropZone.classList.remove('bg-gray-50');
+            dropZone.classList.remove('border-indigo-300');
+        }
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                fileInput.files = files;
+                updateFilePreview();
+            }
+        }
+        
+        function updateFilePreview() {
+            if (fileInput.files.length > 0) {
+                fileName.textContent = fileInput.files[0].name;
+                filePreview.classList.remove('hidden');
+            } else {
+                filePreview.classList.add('hidden');
+            }
+        }
+    });
+</script>
+{% endblock %} 

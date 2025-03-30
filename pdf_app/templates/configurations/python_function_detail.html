@@ -1,0 +1,231 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{{ python_function.name }} | Python Function | PDF Template Builder{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/theme/monokai.min.css">
+<style>
+    .CodeMirror {
+        height: 400px;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+    }
+    .results-container {
+        min-height: 100px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .error-message {
+        color: #ef4444;
+        background-color: #fee2e2;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        margin-top: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ python_function.name }}</h1>
+            <p class="mt-1 text-sm text-gray-500">
+                {{ python_function.description|default:"No description provided" }}
+            </p>
+        </div>
+        <div class="flex space-x-2">
+            <a href="{% url 'python_function_update' python_function.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-edit mr-2"></i> Edit
+            </a>
+            <a href="{% url 'python_function_delete' python_function.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                <i class="fas fa-trash mr-2"></i> Delete
+            </a>
+        </div>
+    </div>
+
+    <div class="border-t border-gray-200 px-4 py-5 sm:p-6">
+        <div class="grid grid-cols-1 gap-y-6 gap-x-4">
+            <!-- Python Code Viewer -->
+            <div>
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Function Code</h3>
+                <textarea id="code-viewer" class="hidden">{{ python_function.function_code }}</textarea>
+            </div>
+
+            <!-- Test Function Section -->
+            <div class="mt-8 border-t border-gray-200 pt-5">
+                <h3 class="text-lg font-medium text-gray-900">Test Function</h3>
+                
+                <div class="mt-4 grid grid-cols-1 gap-y-6 gap-x-4">
+                    <!-- Input Parameters -->
+                    <div>
+                        <label for="function-args" class="block text-sm font-medium text-gray-700">
+                            Function Parameters and Execution Code (Python)
+                        </label>
+                        <div class="mt-1">
+                            <textarea id="function-args" rows="3">
+# Define parameters and execution code here
+# Example 1: Call with parameters
+# result = main(1, 2)
+#
+# Example 2: Set variables and call with them
+# a = 10
+# b = 20
+# result = main(a, b)
+</textarea>
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Define your parameters and store the function result in a 'result' variable to see the return value.</p>
+                    </div>
+
+                    <!-- Execute Button -->
+                    <div>
+                        <button type="button" id="execute-button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <i class="fas fa-play mr-2"></i> Execute Function
+                        </button>
+                    </div>
+
+                    <!-- Results Output -->
+                    <div>
+                        <h4 class="block text-sm font-medium text-gray-700">Output</h4>
+                        <div id="results-output" class="mt-1 shadow-sm block w-full sm:text-sm border border-gray-300 rounded-md bg-gray-50 p-4 results-container font-mono">
+                            <div class="text-gray-400">Run the function to see output</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metadata -->
+            <div class="mt-8 border-t border-gray-200 pt-5">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Metadata</h3>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Created By</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ python_function.created_by.username|default:"Unknown" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Created</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ python_function.created_at|date:"F j, Y, g:i a" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Last Updated</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ python_function.updated_at|date:"F j, Y, g:i a" }}</dd>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/indent/indent.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize CodeMirror for Python code (readonly)
+        const codeViewer = CodeMirror.fromTextArea(document.getElementById('code-viewer'), {
+            mode: 'python',
+            theme: 'monokai',
+            lineNumbers: true,
+            indentUnit: 4,
+            smartIndent: true,
+            matchBrackets: true,
+            readOnly: true
+        });
+
+        // Initialize CodeMirror for function parameters
+        const argsEditor = CodeMirror.fromTextArea(document.getElementById('function-args'), {
+            mode: 'python',
+            theme: 'monokai',
+            lineNumbers: true,
+            indentUnit: 4,
+            smartIndent: true,
+            indentWithTabs: false,
+            matchBrackets: true,
+            autoCloseBrackets: true,
+            extraKeys: {
+                "Tab": function(cm) {
+                    if (cm.somethingSelected()) {
+                        cm.indentSelection("add");
+                    } else {
+                        cm.replaceSelection("    ", "end");
+                    }
+                },
+                "Shift-Tab": function(cm) {
+                    cm.indentSelection("subtract");
+                },
+                "Ctrl-/": "toggleComment"
+            }
+        });
+
+        // Execute button handler
+        const executeButton = document.getElementById('execute-button');
+        const resultsOutput = document.getElementById('results-output');
+        
+        // Get CSRF token from cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+        
+        const csrfToken = getCookie('csrftoken');
+
+        executeButton.addEventListener('click', function() {
+            // Get args code
+            const argsCode = argsEditor.getValue();
+
+            // Show loading state
+            executeButton.disabled = true;
+            executeButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Executing...';
+            resultsOutput.innerHTML = '<div class="text-gray-400">Executing function...</div>';
+
+            // Execute the function on the server
+            fetch('{% url 'python_function_execute' python_function.id %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'args_code=' + encodeURIComponent(argsCode)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let output = data.output || '';
+                    let result = data.result || '';
+                    
+                    resultsOutput.innerHTML = 
+                        '<div class="mb-2">' +
+                        '<h5 class="text-sm font-medium">Function output:</h5>' +
+                        '<pre class="bg-gray-100 p-2 rounded">' + output + '</pre>' +
+                        '</div>' +
+                        '<div>' +
+                        '<h5 class="text-sm font-medium">Return value:</h5>' +
+                        '<pre class="bg-gray-100 p-2 rounded">' + result + '</pre>' +
+                        '</div>';
+                } else {
+                    resultsOutput.innerHTML = 
+                        '<div class="error-message">' +
+                        '<h5 class="font-medium">Error:</h5>' +
+                        '<pre>' + data.error + '</pre>' +
+                        (data.traceback ? '<details><summary>Traceback</summary><pre>' + data.traceback + '</pre></details>' : '') +
+                        '</div>';
+                }
+            })
+            .catch(error => {
+                resultsOutput.innerHTML = '<div class="error-message">Failed to execute: ' + error.message + '</div>';
+            })
+            .finally(() => {
+                executeButton.disabled = false;
+                executeButton.innerHTML = '<i class="fas fa-play mr-2"></i> Execute Function';
+            });
+        });
+    });
+</script>
+{% endblock %} 

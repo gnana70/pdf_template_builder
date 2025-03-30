@@ -1,0 +1,153 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}
+{% if template %}Update Template{% else %}Create Template{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
+    <div class="px-4 py-5 sm:px-6">
+        <h1 class="text-2xl font-bold text-gray-900">
+            {% if template %}
+            Update Template
+            {% else %}
+            Create Template
+            {% endif %}
+        </h1>
+        <p class="mt-1 max-w-2xl text-sm text-gray-500">
+            {% if template %}
+            Update your template details
+            {% else %}
+            Create a new template for PDF data extraction
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <form method="post" enctype="multipart/form-data" id="template-form" class="space-y-6 p-6">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+            <div class="sm:col-span-6">
+                <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Template Name *
+                </label>
+                <div class="mt-1">
+                    {{ form.name }}
+                </div>
+                {% if form.name.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-2 text-sm text-gray-500">Name should be unique across all your templates</p>
+            </div>
+
+            <div class="sm:col-span-6">
+                <label for="{{ form.configuration.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Project Configuration *
+                </label>
+                <div class="mt-1">
+                    {{ form.configuration }}
+                </div>
+                {% if form.configuration.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.configuration.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-2 text-sm text-gray-500">Select an active project configuration</p>
+            </div>
+
+            <div class="sm:col-span-6">
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Description
+                </label>
+                <div class="mt-1">
+                    {{ form.description }}
+                </div>
+                {% if form.description.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="sm:col-span-6">
+                <label for="{{ form.pdf_file.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    PDF File *
+                </label>
+                <div class="mt-1">
+                    <div class="flex items-center">
+                        <div class="flex-grow">
+                            {{ form.pdf_file }}
+                        </div>
+                        {% if template and template.pdf_file %}
+                        <a href="{{ template.pdf_file.url }}" target="_blank" class="ml-3 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-external-link-alt mr-2"></i> View Current PDF
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if form.pdf_file.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.pdf_file.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-2 text-sm text-gray-500">Upload a PDF file for your template{% if template.pdf_file %} (leave empty to keep current file){% endif %}</p>
+            </div>
+        </div>
+
+        <div class="pt-5 border-t border-gray-200 flex justify-between">
+            <div>
+                <a href="{% url 'template_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Templates
+                </a>
+            </div>
+            <div>
+                <button type="submit" class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    {% if template %}
+                    <i class="fas fa-save mr-2"></i> Update Template
+                    {% else %}
+                    <i class="fas fa-save mr-2"></i> Save Template
+                    {% endif %}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('template-form');
+        const configSelect = document.getElementById('{{ form.configuration.id_for_label }}');
+        
+        // Check if we have configurations
+        if (configSelect.options.length <= 1) {
+            // No active configurations, show warning
+            const warning = document.createElement('div');
+            warning.className = 'mt-4 rounded-md bg-yellow-50 p-4';
+            warning.innerHTML = `
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">No active configurations</h3>
+                        <div class="mt-2 text-sm text-yellow-700">
+                            <p>You need at least one active configuration to create a template. <a href="{% url 'configuration_create' %}" class="font-medium underline text-yellow-700 hover:text-yellow-600">Create a configuration</a>.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            form.querySelector('.sm\\:col-span-6').insertAdjacentElement('afterend', warning);
+            
+            // Disable the submit button
+            form.querySelector('button[type="submit"]').disabled = true;
+        }
+        
+        // If there's an error, we should also set focus to the first field with an error
+        if (document.querySelector('.text-red-600')) {
+            const firstErrorField = document.querySelector('.text-red-600').parentNode.querySelector('input, select, textarea');
+            if (firstErrorField) {
+                firstErrorField.focus();
+            }
+        }
+    });
+</script>
+{% endblock %} 

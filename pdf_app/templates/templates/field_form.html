@@ -1,0 +1,132 @@
+{% load static %}
+
+{% if field %}
+<form method="post" action="{% url 'template_field_update' pk=field.id %}" class="space-y-6">
+{% else %}
+<form method="post" action="{% url 'template_field_create' template_pk=template.id %}" class="space-y-6">
+{% endif %}
+    {% csrf_token %}
+    
+    <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+        <div class="sm:col-span-6">
+            <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                Field Name *
+            </label>
+            <div class="mt-1">
+                {{ form.name }}
+            </div>
+            {% if form.name.errors %}
+            <p class="mt-2 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div class="sm:col-span-6">
+            <div class="flex items-center">
+                {{ form.custom_name_enabled }}
+                <label for="{{ form.custom_name_enabled.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-700">
+                    Use Custom Name
+                </label>
+            </div>
+            <div class="mt-2 {% if not field.custom_name %}hidden{% endif %}" id="custom-name-container">
+                {{ form.custom_name }}
+            </div>
+            {% if form.custom_name.errors %}
+            <p class="mt-2 text-sm text-red-600">{{ form.custom_name.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div class="sm:col-span-2">
+            <label for="{{ form.page.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                Page *
+            </label>
+            <div class="mt-1">
+                {{ form.page }}
+            </div>
+            {% if form.page.errors %}
+            <p class="mt-2 text-sm text-red-600">{{ form.page.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div class="sm:col-span-2">
+            <label for="{{ form.x.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                X Coordinate *
+            </label>
+            <div class="mt-1">
+                {{ form.x }}
+            </div>
+            {% if form.x.errors %}
+            <p class="mt-2 text-sm text-red-600">{{ form.x.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div class="sm:col-span-2">
+            <label for="{{ form.y.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                Y Coordinate *
+            </label>
+            <div class="mt-1">
+                {{ form.y }}
+            </div>
+            {% if form.y.errors %}
+            <p class="mt-2 text-sm text-red-600">{{ form.y.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div class="sm:col-span-3">
+            <label for="{{ form.x1.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                Width (X1) *
+            </label>
+            <div class="mt-1">
+                {{ form.x1 }}
+            </div>
+            {% if form.x1.errors %}
+            <p class="mt-2 text-sm text-red-600">{{ form.x1.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div class="sm:col-span-3">
+            <label for="{{ form.y1.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                Height (Y1) *
+            </label>
+            <div class="mt-1">
+                {{ form.y1 }}
+            </div>
+            {% if form.y1.errors %}
+            <p class="mt-2 text-sm text-red-600">{{ form.y1.errors.0 }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="flex justify-end space-x-3">
+        <button type="button" id="cancel-btn" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Cancel
+        </button>
+        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            {% if field %}
+            Update Field
+            {% else %}
+            Save Field
+            {% endif %}
+        </button>
+    </div>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const customNameEnabled = document.getElementById('{{ form.custom_name_enabled.id_for_label }}');
+        const customNameContainer = document.getElementById('custom-name-container');
+        
+        customNameEnabled.addEventListener('change', function() {
+            customNameContainer.classList.toggle('hidden', !this.checked);
+        });
+        
+        document.getElementById('cancel-btn').addEventListener('click', function() {
+            // Close modal or redirect based on context
+            const modal = window.parent.document.getElementById('field-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            } else {
+                window.history.back();
+            }
+        });
+    });
+</script> 

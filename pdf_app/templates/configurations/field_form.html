@@ -1,0 +1,281 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{% if is_new %}Add Field{% else %}Edit Field{% endif %} | {{ configuration.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">
+                {% if is_new %}Add Field{% else %}Edit Field: {{ field.name }}{% endif %}
+            </h1>
+            <p class="mt-1 text-gray-500">
+                Configuration: {{ configuration.name }}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'configuration_detail' configuration.id %}" 
+                class="inline-flex items-center px-4 py-2 border border-gray-300 
+                rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white 
+                hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 
+                focus:ring-indigo-500">
+                <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" 
+                        clip-rule="evenodd" />
+                </svg>
+                Back to Configuration
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="p-6">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="rounded-md bg-red-50 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">
+                                There were errors with your submission
+                            </h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    {# Field name #}
+                    <div class="sm:col-span-3">
+                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Field Name
+                        </label>
+                        <div class="mt-1">
+                            {{ form.name }}
+                        </div>
+                        {% if form.name.errors %}
+                        <p class="mt-2 text-sm text-red-600">
+                            {{ form.name.errors.0 }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    
+                    {# Field type #}
+                    <div class="sm:col-span-3">
+                        <label for="{{ form.field_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Field Type
+                        </label>
+                        <div class="mt-1">
+                            {{ form.field_type }}
+                        </div>
+                        {% if form.field_type.errors %}
+                        <p class="mt-2 text-sm text-red-600">
+                            {{ form.field_type.errors.0 }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    
+                    {# Description #}
+                    <div class="sm:col-span-6">
+                        <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Description
+                        </label>
+                        <div class="mt-1">
+                            {{ form.description }}
+                        </div>
+                        {% if form.description.errors %}
+                        <p class="mt-2 text-sm text-red-600">
+                            {{ form.description.errors.0 }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="sm:col-span-6">
+                        <h3 class="text-lg font-medium leading-6 text-gray-900 mb-3">Validation Settings</h3>
+                        <div class="border-t border-gray-200 pt-4">
+                            <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                                {# Is required #}
+                                <div class="sm:col-span-2">
+                                    <div class="relative flex items-start">
+                                        <div class="flex items-center h-5">
+                                            {{ form.is_required }}
+                                        </div>
+                                        <div class="ml-3 text-sm">
+                                            <label for="{{ form.is_required.id_for_label }}" class="font-medium text-gray-700">
+                                                Required Field
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {# Min length #}
+                                <div class="sm:col-span-2">
+                                    <label for="{{ form.min_length.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                        Minimum Length
+                                    </label>
+                                    <div class="mt-1">
+                                        {{ form.min_length }}
+                                    </div>
+                                    {% if form.min_length.errors %}
+                                    <p class="mt-2 text-sm text-red-600">
+                                        {{ form.min_length.errors.0 }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                
+                                {# Max length #}
+                                <div class="sm:col-span-2">
+                                    <label for="{{ form.max_length.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                        Maximum Length
+                                    </label>
+                                    <div class="mt-1">
+                                        {{ form.max_length }}
+                                    </div>
+                                    {% if form.max_length.errors %}
+                                    <p class="mt-2 text-sm text-red-600">
+                                        {{ form.max_length.errors.0 }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                
+                                {# Regex pattern #}
+                                <div class="sm:col-span-6">
+                                    <label for="{{ form.regex_pattern.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                        Regular Expression Pattern
+                                    </label>
+                                    <div class="mt-1">
+                                        {{ form.regex_pattern }}
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-500">
+                                        Example: ^[A-Z0-9]{5,10}$ for uppercase letters and numbers between 5-10 characters
+                                    </p>
+                                    {% if form.regex_pattern.errors %}
+                                    <p class="mt-2 text-sm text-red-600">
+                                        {{ form.regex_pattern.errors.0 }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                
+                                {# Default value #}
+                                <div class="sm:col-span-6">
+                                    <label for="{{ form.default_value.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                        Default Value
+                                    </label>
+                                    <div class="mt-1">
+                                        {{ form.default_value }}
+                                    </div>
+                                    {% if form.default_value.errors %}
+                                    <p class="mt-2 text-sm text-red-600">
+                                        {{ form.default_value.errors.0 }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Python Function Section -->
+                    <div class="sm:col-span-6">
+                        <h3 class="text-lg font-medium leading-6 text-gray-900 mb-3">Python Function</h3>
+                        <div class="border-t border-gray-200 pt-4">
+                            <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                                {# Python function dropdown #}
+                                <div class="sm:col-span-4">
+                                    <label for="{{ form.python_function.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                        Python Function
+                                    </label>
+                                    <div class="mt-1 flex rounded-md shadow-sm">
+                                        <div class="flex-grow">
+                                            {{ form.python_function }}
+                                        </div>
+                                        <span class="ml-3 inline-flex rounded-md shadow-sm">
+                                            <button type="button" 
+                                                id="select-python-function-btn"
+                                                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                                Browse Functions
+                                            </button>
+                                        </span>
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-500">
+                                        Select a Python function to apply custom processing to this field
+                                    </p>
+                                    {% if form.python_function.errors %}
+                                    <p class="mt-2 text-sm text-red-600">
+                                        {{ form.python_function.errors.0 }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end pt-5">
+                    <a href="{% url 'configuration_detail' configuration.id %}" 
+                        class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm 
+                        text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none 
+                        focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                        class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent 
+                        shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 
+                        hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 
+                        focus:ring-indigo-500">
+                        {% if is_new %}Add Field{% else %}Save Changes{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Setup Python Function modal
+        const selectFunctionBtn = document.getElementById('select-python-function-btn');
+        const pythonFunctionSelect = document.getElementById('{{ form.python_function.id_for_label }}');
+        
+        // Check if we have just returned from function selection
+        const selectedFunctionId = localStorage.getItem('selected_function_id');
+        const selectedFunctionName = localStorage.getItem('selected_function_name');
+        
+        if (selectedFunctionId && pythonFunctionSelect) {
+            // Set the selected function in the dropdown
+            const options = pythonFunctionSelect.options;
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === selectedFunctionId) {
+                    pythonFunctionSelect.selectedIndex = i;
+                    break;
+                }
+            }
+            
+            // Clear the local storage
+            localStorage.removeItem('selected_function_id');
+            localStorage.removeItem('selected_function_name');
+        }
+        
+        if (selectFunctionBtn) {
+            selectFunctionBtn.addEventListener('click', function() {
+                // Redirect to Python function list with selection mode
+                window.location.href = '{% url "python_function_list" %}?mode=select&return_url=' + encodeURIComponent(window.location.pathname);
+            });
+        }
+    });
+</script>
+{% endblock %} 

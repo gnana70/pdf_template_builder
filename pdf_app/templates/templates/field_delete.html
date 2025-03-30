@@ -1,0 +1,76 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Delete Field{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
+        <div class="px-4 py-5 sm:px-6">
+            <h1 class="text-2xl font-bold text-gray-900">Delete Field</h1>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Confirm field deletion</p>
+        </div>
+    </div>
+    
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="p-6">
+            <div class="rounded-md bg-red-50 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Warning</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            <p>You are about to delete the field "<strong>{{ field.name }}</strong>" from template "<strong>{{ field.template.name }}</strong>". This action cannot be undone.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-md mb-6">
+                <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Field Name</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ field.name }}</dd>
+                    </div>
+                    {% if field.custom_name %}
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Custom Name</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ field.custom_name }}</dd>
+                    </div>
+                    {% endif %}
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Page</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ field.page }}</dd>
+                    </div>
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Position</dt>
+                        <dd class="mt-1 text-sm text-gray-900">({{ field.x|floatformat:2 }}, {{ field.y|floatformat:2 }})</dd>
+                    </div>
+                    <div class="sm:col-span-1">
+                        <dt class="text-sm font-medium text-gray-500">Size</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ field.x1|floatformat:2 }} x {{ field.y1|floatformat:2 }}</dd>
+                    </div>
+                    {% if field.extracted_text %}
+                    <div class="sm:col-span-2">
+                        <dt class="text-sm font-medium text-gray-500">Extracted Text</dt>
+                        <dd class="mt-1 text-sm text-gray-900 bg-gray-100 p-2 rounded">{{ field.extracted_text }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+            
+            <form method="post" class="pt-5 border-t border-gray-200 flex justify-between">
+                {% csrf_token %}
+                <a href="{% url 'template_configure' pk=field.template.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-arrow-left mr-2"></i> Cancel & Return
+                </a>
+                <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    <i class="fas fa-trash mr-2"></i> Delete Field
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

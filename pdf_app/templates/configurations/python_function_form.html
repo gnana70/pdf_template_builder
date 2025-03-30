@@ -1,0 +1,380 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{% if form.instance.id %}Edit Python Function{% else %}Create Python Function{% endif %} | PDF Template Builder{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/theme/monokai.min.css">
+<style>
+    .CodeMirror {
+        height: 400px;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+    }
+    .results-container {
+        min-height: 100px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .error-message {
+        color: #ef4444;
+        background-color: #fee2e2;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        margin-top: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+        <h1 class="text-2xl font-bold text-gray-900">{% if form.instance.id %}Edit Python Function{% else %}Create Python Function{% endif %}</h1>
+        <p class="mt-1 text-sm text-gray-500">
+            {% if form.instance.id %}
+            Update your Python function
+            {% else %}
+            Create a new Python function for data processing
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="border-t border-gray-200">
+        <div class="px-4 py-5 sm:p-6">
+            <!-- Form for function metadata -->
+            <form method="post" id="pythonFunctionForm" class="space-y-6">
+                {% csrf_token %}
+                
+                {% if form.errors %}
+                <div class="rounded-md bg-red-50 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">
+                                There were errors with your submission
+                            </h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    {% for field in form %}
+                                        {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                    {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <!-- Name -->
+                    <div class="sm:col-span-3">
+                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Name
+                        </label>
+                        <div class="mt-1">
+                            {{ form.name }}
+                        </div>
+                        {% if form.name.help_text %}
+                        <p class="mt-2 text-sm text-gray-500">{{ form.name.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Description -->
+                    <div class="sm:col-span-6">
+                        <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Description
+                        </label>
+                        <div class="mt-1">
+                            {{ form.description }}
+                        </div>
+                        {% if form.description.help_text %}
+                        <p class="mt-2 text-sm text-gray-500">{{ form.description.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Python Code Editor -->
+                    <div class="sm:col-span-6">
+                        <label for="code-editor" class="block text-sm font-medium text-gray-700">
+                            Python Function Code
+                        </label>
+                        <div class="mt-1">
+                            <textarea id="code-editor" name="function_code">{{ form.function_code.value|default:"def main():\n    # Your code here\n    return 'Hello World!'" }}</textarea>
+                        </div>
+                        <div id="lintErrors" class="mt-2 hidden">
+                            <h4 class="text-sm font-medium text-red-700">Linting Issues:</h4>
+                            <ul class="list-disc pl-5 text-sm text-red-600" id="lintErrorsList"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Function Section -->
+                <div class="mt-8 border-t border-gray-200 pt-5">
+                    <h3 class="text-lg font-medium text-gray-900">Test Function</h3>
+                    
+                    <div class="mt-4 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                        <!-- Input Parameters -->
+                        <div class="sm:col-span-6">
+                            <label for="function-args" class="block text-sm font-medium text-gray-700">
+                                Function Parameters and Execution Code (Python)
+                            </label>
+                            <div class="mt-1">
+                                <textarea id="function-args" rows="3">
+# Define parameters and execution code here
+# Example 1: Call with parameters
+# result = main(1, 2)
+#
+# Example 2: Set variables and call with them
+# a = 10
+# b = 20
+# result = main(a, b)
+</textarea>
+                            </div>
+                            <p class="mt-1 text-sm text-gray-500">Define your parameters and store the function result in a 'result' variable to see the return value.</p>
+                        </div>
+
+                        <!-- Execute Button -->
+                        <div class="sm:col-span-6">
+                            <button type="button" id="execute-button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                <i class="fas fa-play mr-2"></i> Execute Function
+                            </button>
+                        </div>
+
+                        <!-- Results Output -->
+                        <div class="sm:col-span-6">
+                            <h4 class="block text-sm font-medium text-gray-700">Output</h4>
+                            <div id="results-output" class="mt-1 shadow-sm block w-full sm:text-sm border border-gray-300 rounded-md bg-gray-50 p-4 results-container font-mono">
+                                <div class="text-gray-400">Run the function to see output</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-5 border-t border-gray-200 mt-6">
+                    <div class="flex justify-end">
+                        <a href="{% url 'python_function_list' %}" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Cancel
+                        </a>
+                        <button type="submit" id="save-button" class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            {% if form.instance.id %}Update{% else %}Create{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/comment/comment.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/indent/indent.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/lint/lint.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize CodeMirror for Python code
+        const codeEditor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+            mode: 'python',
+            theme: 'monokai',
+            lineNumbers: true,
+            indentUnit: 4,
+            smartIndent: true,
+            indentWithTabs: false,
+            matchBrackets: true,
+            autoCloseBrackets: true,
+            extraKeys: {
+                "Tab": function(cm) {
+                    if (cm.somethingSelected()) {
+                        cm.indentSelection("add");
+                    } else {
+                        cm.replaceSelection("    ", "end");
+                    }
+                },
+                "Shift-Tab": function(cm) {
+                    cm.indentSelection("subtract");
+                },
+                "Ctrl-/": "toggleComment"
+            }
+        });
+
+        // Initialize CodeMirror for function parameters
+        const argsEditor = CodeMirror.fromTextArea(document.getElementById('function-args'), {
+            mode: 'python',
+            theme: 'monokai',
+            lineNumbers: true,
+            indentUnit: 4,
+            smartIndent: true,
+            indentWithTabs: false,
+            matchBrackets: true,
+            autoCloseBrackets: true,
+            extraKeys: {
+                "Tab": function(cm) {
+                    if (cm.somethingSelected()) {
+                        cm.indentSelection("add");
+                    } else {
+                        cm.replaceSelection("    ", "end");
+                    }
+                },
+                "Shift-Tab": function(cm) {
+                    cm.indentSelection("subtract");
+                },
+                "Ctrl-/": "toggleComment"
+            }
+        });
+
+        // Execute button handler
+        const executeButton = document.getElementById('execute-button');
+        const resultsOutput = document.getElementById('results-output');
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        executeButton.addEventListener('click', function() {
+            // Get current code and args
+            const code = codeEditor.getValue();
+            const argsCode = argsEditor.getValue();
+
+            // Show loading state
+            executeButton.disabled = true;
+            executeButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Executing...';
+            resultsOutput.innerHTML = '<div class="text-gray-400">Executing function...</div>';
+
+            {% if form.instance.id %}
+            // For existing function, we can execute directly
+            fetch('{% url 'python_function_execute' form.instance.id %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `args_code=${encodeURIComponent(argsCode)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let output = data.output || '';
+                    let result = data.result || '';
+                    
+                    resultsOutput.innerHTML = 
+                        '<div class="mb-2">' +
+                        '<h5 class="text-sm font-medium">Function output:</h5>' +
+                        '<pre class="bg-gray-100 p-2 rounded">' + output + '</pre>' +
+                        '</div>' +
+                        '<div>' +
+                        '<h5 class="text-sm font-medium">Return value:</h5>' +
+                        '<pre class="bg-gray-100 p-2 rounded">' + result + '</pre>' +
+                        '</div>';
+                } else {
+                    resultsOutput.innerHTML = 
+                        '<div class="error-message">' +
+                        '<h5 class="font-medium">Error:</h5>' +
+                        '<pre>' + data.error + '</pre>' +
+                        (data.traceback ? '<details><summary>Traceback</summary><pre>' + data.traceback + '</pre></details>' : '') +
+                        '</div>';
+                }
+            })
+            .catch(error => {
+                resultsOutput.innerHTML = '<div class="error-message">Failed to execute: ' + error.message + '</div>';
+            })
+            .finally(() => {
+                executeButton.disabled = false;
+                executeButton.innerHTML = '<i class="fas fa-play mr-2"></i> Execute Function';
+            });
+            {% else %}
+            // For new function, we'll use the raw code execution endpoint
+            fetch('{% url 'execute_raw_python_code' %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    code: code,
+                    args_code: argsCode
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let output = data.output || '';
+                    let result = data.result || '';
+                    
+                    resultsOutput.innerHTML = 
+                        '<div class="mb-2">' +
+                        '<h5 class="text-sm font-medium">Function output:</h5>' +
+                        '<pre class="bg-gray-100 p-2 rounded">' + output + '</pre>' +
+                        '</div>' +
+                        '<div>' +
+                        '<h5 class="text-sm font-medium">Return value:</h5>' +
+                        '<pre class="bg-gray-100 p-2 rounded">' + result + '</pre>' +
+                        '</div>';
+                } else {
+                    resultsOutput.innerHTML = 
+                        '<div class="error-message">' +
+                        '<h5 class="font-medium">Error:</h5>' +
+                        '<pre>' + data.error + '</pre>' +
+                        (data.traceback ? '<details><summary>Traceback</summary><pre>' + data.traceback + '</pre></details>' : '') +
+                        '</div>';
+                }
+            })
+            .catch(error => {
+                resultsOutput.innerHTML = '<div class="error-message">Failed to execute: ' + error.message + '</div>';
+            })
+            .finally(() => {
+                executeButton.disabled = false;
+                executeButton.innerHTML = '<i class="fas fa-play mr-2"></i> Execute Function';
+            });
+            {% endif %}
+        });
+
+        // Basic linting
+        function lintCode() {
+            // This is a simplified linting, Python server-side validation will be more thorough
+            const code = codeEditor.getValue();
+            const lintErrors = document.getElementById('lintErrors');
+            const lintErrorsList = document.getElementById('lintErrorsList');
+            const errors = [];
+
+            // Simple checks
+            if (code.includes('import os') || code.includes('import sys')) {
+                errors.push('Security warning: Importing system modules is restricted');
+            }
+            
+            // Check for def main
+            if (!code.includes('def main')) {
+                errors.push('Warning: No "main" function defined. Function should contain a main() function.');
+            }
+
+            // Update UI
+            if (errors.length > 0) {
+                lintErrorsList.innerHTML = '';
+                errors.forEach(error => {
+                    const li = document.createElement('li');
+                    li.textContent = error;
+                    lintErrorsList.appendChild(li);
+                });
+                lintErrors.classList.remove('hidden');
+            } else {
+                lintErrors.classList.add('hidden');
+            }
+        }
+
+        // Add event listener for linting
+        codeEditor.on('change', function() {
+            lintCode();
+        });
+
+        // Run initial lint
+        lintCode();
+    });
+</script>
+{% endblock %} 

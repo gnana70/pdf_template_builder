@@ -1,0 +1,113 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Templates{% endblock %}
+
+{% block extra_css %}
+<style>
+    .template-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .template-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Templates</h1>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Manage your PDF templates for data extraction</p>
+        </div>
+        <a href="{% url 'template_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="fas fa-plus mr-2"></i> New Template
+        </a>
+    </div>
+</div>
+
+{% if templates %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for template in templates %}
+    <div class="bg-white rounded-lg shadow-md overflow-hidden template-card">
+        <div class="p-5">
+            <div class="flex justify-between items-start">
+                <h3 class="text-lg font-medium text-gray-900 truncate mb-1" title="{{ template.name }}">{{ template.name }}</h3>
+                <div class="dropdown relative ml-3">
+                    <button class="text-gray-400 hover:text-gray-600 focus:outline-none" id="dropdown-{{ template.id }}">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 dropdown-menu" role="menu" aria-orientation="vertical" aria-labelledby="dropdown-{{ template.id }}">
+                        <a href="{% url 'template_configure' pk=template.id %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-cog mr-2"></i> Configure
+                        </a>
+                        <a href="{% url 'template_update' pk=template.id %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-edit mr-2"></i> Edit
+                        </a>
+                        <a href="{% url 'template_delete' pk=template.id %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                            <i class="fas fa-trash mr-2"></i> Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <p class="text-sm text-gray-500 mb-3">Configuration: {{ template.configuration.name }}</p>
+            {% if template.description %}
+            <p class="text-sm text-gray-600 mb-3 line-clamp-2">{{ template.description }}</p>
+            {% else %}
+            <p class="text-sm text-gray-400 italic mb-3">No description</p>
+            {% endif %}
+            <div class="mt-4 flex justify-between items-center">
+                <div class="text-xs text-gray-500">
+                    Created: {{ template.created_at|date:"M d, Y" }}
+                </div>
+                <a href="{% url 'template_configure' pk=template.id %}" class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Configure <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white shadow-md rounded-lg p-6 text-center">
+    <div class="text-gray-400 mb-4">
+        <i class="fas fa-file-pdf text-6xl"></i>
+    </div>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">No templates yet</h3>
+    <p class="text-gray-500 mb-4">Create your first template to start extracting data from PDFs</p>
+    <a href="{% url 'template_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        <i class="fas fa-plus mr-2"></i> Create Template
+    </a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle dropdown menus
+        const dropdownButtons = document.querySelectorAll('[id^="dropdown-"]');
+        dropdownButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const menu = this.nextElementSibling;
+                menu.classList.toggle('hidden');
+            });
+        });
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            dropdownButtons.forEach(button => {
+                if (!button.contains(e.target)) {
+                    const menu = button.nextElementSibling;
+                    if (!menu.classList.contains('hidden')) {
+                        menu.classList.add('hidden');
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock %} 

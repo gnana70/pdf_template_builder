@@ -1,0 +1,212 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{% if select_mode %}Select Python Function{% else %}Python Functions{% endif %} | PDF Template Builder{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{% if select_mode %}Select Python Function{% else %}Python Functions{% endif %}</h1>
+            <p class="mt-1 text-sm text-gray-500">
+                {% if select_mode %}Select a Python function to use with your column{% else %}Create and manage Python functions for data processing{% endif %}
+            </p>
+        </div>
+        {% if not select_mode %}
+        <a href="{% url 'python_function_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="fas fa-plus mr-2"></i> New Function
+        </a>
+        {% else %}
+        <a href="{{ return_url }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="fas fa-arrow-left mr-2"></i> Back
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="border-t border-gray-200">
+        {% if python_functions %}
+        <div class="bg-white shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Name
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Description
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Created By
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Created
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Last Updated
+                        </th>
+                        <th scope="col" class="relative px-6 py-3">
+                            <span class="sr-only">Actions</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for python_function in python_functions %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">
+                                <a href="{% if not select_mode %}{% url 'python_function_detail' python_function.id %}{% else %}javascript:void(0){% endif %}" class="text-indigo-600 hover:text-indigo-900">
+                                    {{ python_function.name }}
+                                </a>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-500 truncate max-w-xs">
+                                {{ python_function.description|default:"No description" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">
+                                {{ python_function.created_by.username|default:"Unknown" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">
+                                {{ python_function.created_at|date:"M j, Y" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">
+                                {{ python_function.updated_at|date:"M j, Y" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            {% if select_mode %}
+                            <button 
+                                onclick="selectFunction('{{ python_function.id }}', '{{ python_function.name }}')" 
+                                class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Select
+                            </button>
+                            {% else %}
+                            <a href="{% url 'python_function_detail' python_function.id %}" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
+                            <a href="{% url 'python_function_update' python_function.id %}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                            <a href="{% url 'python_function_delete' python_function.id %}" class="text-red-600 hover:text-red-900">Delete</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <i class="fas fa-code text-4xl text-gray-300 mb-2"></i>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No python functions</h3>
+            <p class="mt-1 text-sm text-gray-500">Get started by creating a new Python function.</p>
+            <div class="mt-6">
+                <a href="{% url 'python_function_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-plus mr-2"></i> New Function
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination controls -->
+{% if page_obj.has_other_pages %}
+<div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-4 rounded-lg">
+    <div class="flex-1 flex justify-between">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Previous
+        </a>
+        {% else %}
+        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-50 cursor-not-allowed">
+            Previous
+        </span>
+        {% endif %}
+        
+        <div class="hidden md:flex">
+            <p class="text-sm text-gray-700 self-center mx-4">
+                Page {{ page_obj.number }} of {{ paginator.num_pages }}
+            </p>
+        </div>
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Next
+        </a>
+        {% else %}
+        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-50 cursor-not-allowed">
+            Next
+        </span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if select_mode %}
+<script>
+    function selectFunction(id, name) {
+        // Get the return URL from the context
+        const returnUrl = "{{ return_url }}";
+        
+        {% if target == 'configuration' %}
+        // If we're selecting a function for a configuration, make an AJAX call to set it
+        fetch('{% url "attach_python_function" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                function_id: id,
+                config_id: '{{ config_id }}'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Redirect back to the configuration detail page
+                window.location.href = returnUrl;
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while attaching the function.');
+        });
+        {% elif target == 'template_field' %}
+        // Store the selected function id and name in local storage for the template field
+        localStorage.setItem('selected_function_id', id);
+        localStorage.setItem('selected_function_name', name);
+        
+        console.log('Sending postMessage to opener with function:', id, name);
+        
+        // Send the message and close the window
+        try {
+            const message = { type: 'function_selected', id: id, name: name };
+            window.opener.postMessage(message, '*');
+            console.log('Message sent successfully');
+            
+            // Close after a short delay to ensure message is sent
+            setTimeout(() => {
+                window.close();
+            }, 300);
+        } catch (error) {
+            console.error('Error sending message:', error);
+            alert('Error sending selection to parent window. Please try again.');
+        }
+        {% else %}
+        // Store the selected function id and name in local storage
+        localStorage.setItem('selected_function_id', id);
+        localStorage.setItem('selected_function_name', name);
+        
+        // Navigate back to the form
+        window.location.href = returnUrl;
+        {% endif %}
+    }
+</script>
+{% endif %}
+{% endblock %} 

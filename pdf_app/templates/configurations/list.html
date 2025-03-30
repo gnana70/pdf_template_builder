@@ -1,0 +1,297 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Project Configurations | PDF Template Builder{% endblock %}
+
+{% block content %}
+<div>
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+                Project Configurations
+            </h1>
+            <p class="mt-2 text-lg text-gray-600">
+                Manage configurations that define how templates extract data from PDF documents.
+            </p>
+        </div>
+        <div class="mt-4 md:mt-0">
+            <a href="{% url 'configuration_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-plus mr-2"></i> Create Configuration
+            </a>
+        </div>
+    </div>
+    
+    <!-- Filters Section -->
+    <div class="bg-white shadow-sm rounded-lg p-4 mb-8">
+        <div class="md:flex md:items-center">
+            <div class="flex-1 min-w-0">
+                <div class="relative rounded-md">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" id="search" name="search" class="block w-full pl-10 sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Search configurations">
+                </div>
+            </div>
+            <div class="mt-4 md:mt-0 md:ml-4 flex">
+                <select id="status-filter" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                    <option value="">All statuses</option>
+                    <option value="draft">Draft</option>
+                    <option value="active">Active</option>
+                    <option value="archived">Archived</option>
+                </select>
+                <select id="template-filter" class="ml-3 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                    <option value="">All templates</option>
+                    {% for template in templates %}
+                    <option value="{{ template.id }}">{{ template.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    {% if messages %}
+    <div class="mb-8">
+        {% for message in messages %}
+        <div class="rounded-md p-4 {% if message.tags == 'success' %}bg-green-50 text-green-800{% elif message.tags == 'error' %}bg-red-50 text-red-800{% else %}bg-blue-50 text-blue-800{% endif %} shadow-sm" role="alert">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    {% if message.tags == 'success' %}
+                    <i class="fas fa-check-circle text-green-400"></i>
+                    {% elif message.tags == 'error' %}
+                    <i class="fas fa-exclamation-circle text-red-400"></i>
+                    {% else %}
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                    {% endif %}
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">{{ message }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Configurations List -->
+    {% if configurations %}
+    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        <ul class="divide-y divide-gray-200">
+            {% for configuration in configurations %}
+            <li>
+                <div class="block hover:bg-gray-50">
+                    <div class="px-4 py-4 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="bg-indigo-100 rounded-md p-2 mr-4">
+                                    <i class="fas fa-cogs text-indigo-600 text-lg"></i>
+                                </div>
+                                <a href="{% url 'configuration_detail' configuration.id %}" class="text-lg font-medium text-indigo-600 truncate hover:underline">
+                                    {{ configuration.name }}
+                                </a>
+                            </div>
+                            <div class="ml-2 flex-shrink-0 flex items-center">
+                                <p class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full mr-4
+                                    {% if configuration.status == 'draft' %}bg-yellow-100 text-yellow-800
+                                    {% elif configuration.status == 'active' %}bg-green-100 text-green-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ configuration.get_status_display }}
+                                </p>
+                                <div class="flex space-x-2">
+                                    <a href="{% url 'configuration_edit' configuration.id %}" class="text-indigo-600 hover:text-indigo-900" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'configuration_delete' configuration.id %}" class="delete-config-form" data-config-name="{{ configuration.name }}">
+                                        {% csrf_token %}
+                                        <button type="button" class="delete-config-btn text-red-600 hover:text-red-900" title="Delete">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2 sm:flex sm:justify-between">
+                            <div class="sm:flex">
+                                <p class="flex items-center text-sm text-gray-500">
+                                    <i class="fas fa-file-alt flex-shrink-0 mr-1.5 text-gray-400"></i>
+                                    {{ configuration.template.name }}
+                                </p>
+                            </div>
+                            <div class="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                                <i class="fas fa-clock flex-shrink-0 mr-1.5 text-gray-400"></i>
+                                <p>
+                                    Updated {{ configuration.updated_at|date:"M d, Y" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <div class="bg-white shadow overflow-hidden sm:rounded-md p-6 text-center">
+        <div class="animate-pulse">
+            <i class="fas fa-cogs text-gray-300 text-6xl mb-4"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900">No configurations found</h3>
+        <p class="mt-1 text-sm text-gray-500">Get started by creating your first project configuration.</p>
+        <div class="mt-6">
+            <a href="{% url 'configuration_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-plus mr-2"></i> Create Configuration
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-4 rounded-lg">
+        <div class="flex-1 flex justify-between sm:hidden">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Previous
+            </a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Next
+            </a>
+            {% endif %}
+        </div>
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm text-gray-700">
+                    Showing
+                    <span class="font-medium">{{ page_obj.start_index }}</span>
+                    to
+                    <span class="font-medium">{{ page_obj.end_index }}</span>
+                    of
+                    <span class="font-medium">{{ paginator.count }}</span>
+                    results
+                </p>
+            </div>
+            <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <span class="sr-only">Previous</span>
+                        <i class="fas fa-chevron-left h-5 w-5"></i>
+                    </a>
+                    {% endif %}
+                    
+                    {% for i in paginator.page_range %}
+                        {% if page_obj.number == i %}
+                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-indigo-50 text-sm font-medium text-indigo-600">
+                            {{ i }}
+                        </span>
+                        {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                        <a href="?page={{ i }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            {{ i }}
+                        </a>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <span class="sr-only">Next</span>
+                        <i class="fas fa-chevron-right h-5 w-5"></i>
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Remove duplicate success messages with more specific targeting
+        const successMessages = document.querySelectorAll('[role="alert"] .text-sm.font-medium');
+        const seenTexts = new Set();
+        
+        successMessages.forEach(messageElement => {
+            const text = messageElement.textContent.trim();
+            if (seenTexts.has(text)) {
+                // Find the parent alert element and remove it
+                const alertElement = messageElement.closest('[role="alert"]');
+                alertElement.remove();
+            } else {
+                seenTexts.add(text);
+            }
+        });
+        
+        // Delete configuration confirmation
+        document.querySelectorAll('.delete-config-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const form = this.closest('.delete-config-form');
+                const configName = form.getAttribute('data-config-name');
+                
+                if (confirm(`Are you sure you want to delete the configuration "${configName}"? This action cannot be undone.`)) {
+                    form.submit();
+                }
+            });
+        });
+        
+        // Filters functionality
+        const searchInput = document.getElementById('search');
+        const statusFilter = document.getElementById('status-filter');
+        const templateFilter = document.getElementById('template-filter');
+        
+        function applyFilters() {
+            const searchValue = searchInput.value.trim();
+            const statusValue = statusFilter.value;
+            const templateValue = templateFilter.value;
+            
+            // Build URL with query parameters
+            let url = window.location.pathname;
+            let params = [];
+            
+            if (searchValue) {
+                params.push(`search=${encodeURIComponent(searchValue)}`);
+            }
+            
+            if (statusValue) {
+                params.push(`status=${encodeURIComponent(statusValue)}`);
+            }
+            
+            if (templateValue) {
+                params.push(`template=${encodeURIComponent(templateValue)}`);
+            }
+            
+            // Construct the URL
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+            
+            // Navigate to the filtered URL
+            window.location.href = url;
+        }
+        
+        // Event listeners for filters
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        });
+        
+        statusFilter.addEventListener('change', applyFilters);
+        templateFilter.addEventListener('change', applyFilters);
+        
+        // Pre-populate filters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('search')) {
+            searchInput.value = urlParams.get('search');
+        }
+        if (urlParams.has('status')) {
+            statusFilter.value = urlParams.get('status');
+        }
+        if (urlParams.has('template')) {
+            templateFilter.value = urlParams.get('template');
+        }
+    });
+</script>
+{% endblock %} 

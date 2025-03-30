@@ -1,0 +1,36 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Delete Python Function | PDF Template Builder{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+        <h3 class="text-lg leading-6 font-medium text-gray-900">Delete Python Function</h3>
+        <div class="mt-2 max-w-xl text-sm text-gray-500">
+            <p>
+                Are you sure you want to delete the Python function "<strong>{{ python_function.name }}</strong>"? This action cannot be undone.
+            </p>
+        </div>
+        <div class="mt-5">
+            <form method="post">
+                {% csrf_token %}
+                <div class="flex justify-start">
+                    {% if python_function and python_function.id %}
+                    <a href="{% url 'python_function_detail' python_function.id %}" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-3">
+                        Cancel
+                    </a>
+                    {% else %}
+                    <a href="{% url 'python_function_list' %}" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-3">
+                        Back to List
+                    </a>
+                    {% endif %}
+                    <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        Delete
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

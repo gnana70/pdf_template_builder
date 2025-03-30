@@ -1,0 +1,364 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{% if is_new %}Add Table{% else %}Edit Table{% endif %} | {{ configuration.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">
+                {% if is_new %}Add Table{% else %}Edit Table: {{ table.name }}{% endif %}
+            </h1>
+            <p class="mt-1 text-gray-500">
+                Configuration: {{ configuration.name }}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'configuration_detail' configuration.id %}" 
+                class="inline-flex items-center px-4 py-2 border border-gray-300 
+                rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white 
+                hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 
+                focus:ring-indigo-500">
+                <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" 
+                        clip-rule="evenodd" />
+                </svg>
+                Back to Configuration
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="p-6">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="rounded-md bg-red-50 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">
+                                There were errors with your submission
+                            </h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    {# Table name #}
+                    <div class="sm:col-span-6">
+                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Table Name
+                        </label>
+                        <div class="mt-1">
+                            {{ form.name }}
+                        </div>
+                        {% if form.name.errors %}
+                        <p class="mt-2 text-sm text-red-600">
+                            {{ form.name.errors.0 }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    
+                    {# Description #}
+                    <div class="sm:col-span-6">
+                        <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Description
+                        </label>
+                        <div class="mt-1">
+                            {{ form.description }}
+                        </div>
+                        {% if form.description.errors %}
+                        <p class="mt-2 text-sm text-red-600">
+                            {{ form.description.errors.0 }}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if is_new %}
+                <div class="mt-8 border-t border-gray-200 pt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Initial Columns</h3>
+                    <p class="text-sm text-gray-500 mb-4">
+                        You can define initial columns for this table. You will be able to add more columns after creating the table.
+                    </p>
+                    
+                    <div id="columns-container">
+                        <!-- Column templates will be added here -->
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button type="button" id="add-column-btn" class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <svg class="-ml-0.5 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                            Add Column
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="flex justify-end pt-5">
+                    <a href="{% url 'configuration_detail' configuration.id %}" 
+                        class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm 
+                        text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none 
+                        focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                        class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent 
+                        shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 
+                        hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 
+                        focus:ring-indigo-500">
+                        {% if is_new %}Add Table{% else %}Save Changes{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if table %}
+    <div class="mt-8">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-gray-900">Table Columns</h2>
+            <a href="{% url 'table_column_create' table.id %}" 
+               class="inline-flex items-center px-4 py-2 border border-transparent 
+                      rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 
+                      hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 
+                      focus:ring-indigo-500">
+                <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                Add Column
+            </a>
+        </div>
+        
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Required</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for column in columns %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ column.name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ column.get_data_type_display }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if column.is_required %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Yes</span>
+                            {% else %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">No</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <a href="{% url 'table_column_edit' column.id %}" class="text-indigo-600 hover:text-indigo-900 mr-4">Edit</a>
+                            <a href="#" class="text-red-600 hover:text-red-900 delete-column" data-column-id="{{ column.id }}" data-column-name="{{ column.name }}">Delete</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                            No columns have been defined for this table yet. 
+                            <a href="{% url 'table_column_create' table.id %}" class="text-indigo-600 hover:text-indigo-900">Add a column</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if is_new != True %}
+    <!-- Delete Column Confirmation Modal -->
+    <div id="delete-column-modal" class="fixed z-10 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                Delete Column
+                            </h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    Are you sure you want to delete the column <span id="delete-column-name" class="font-semibold"></span>? This action cannot be undone.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <form id="delete-column-form" method="post" action="">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                            Delete
+                        </button>
+                    </form>
+                    <button type="button" id="cancel-delete" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+{% if is_new %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let columnCount = 0;
+        const columnsContainer = document.getElementById('columns-container');
+        const addColumnBtn = document.getElementById('add-column-btn');
+        
+        // Function to create a column template
+        function addColumnTemplate() {
+            const columnId = columnCount++;
+            const columnTemplate = document.createElement('div');
+            columnTemplate.className = 'column-template border border-gray-200 rounded-md p-4 mb-4 relative';
+            columnTemplate.dataset.id = columnId;
+            
+            columnTemplate.innerHTML = `
+                <button type="button" class="remove-column-btn absolute top-2 right-2 text-red-500 hover:text-red-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div class="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-3">
+                        <label for="column_name_${columnId}" class="block text-sm font-medium text-gray-700">Column Name</label>
+                        <div class="mt-1">
+                            <input type="text" name="column_name_${columnId}" id="column_name_${columnId}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="Enter column name" required>
+                        </div>
+                    </div>
+                    
+                    <div class="sm:col-span-3">
+                        <label for="column_type_${columnId}" class="block text-sm font-medium text-gray-700">Data Type</label>
+                        <div class="mt-1">
+                            <select name="column_type_${columnId}" id="column_type_${columnId}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                <option value="string">Text</option>
+                                <option value="number">Number</option>
+                                <option value="float">Float</option>
+                                <option value="date">Date</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="sm:col-span-6">
+                        <label for="column_description_${columnId}" class="block text-sm font-medium text-gray-700">Description</label>
+                        <div class="mt-1">
+                            <textarea name="column_description_${columnId}" id="column_description_${columnId}" rows="2" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="Enter description"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="sm:col-span-3">
+                        <div class="relative flex items-start">
+                            <div class="flex items-center h-5">
+                                <input type="checkbox" name="column_required_${columnId}" id="column_required_${columnId}" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="column_required_${columnId}" class="font-medium text-gray-700">Required Column</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="sm:col-span-6">
+                        <label for="column_regex_${columnId}" class="block text-sm font-medium text-gray-700">Regex Pattern</label>
+                        <div class="mt-1">
+                            <input type="text" name="column_regex_${columnId}" id="column_regex_${columnId}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="Regular expression pattern">
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">Example: ^[A-Z0-9]{5,10}$ for uppercase letters and numbers between 5-10 characters</p>
+                    </div>
+                </div>
+            `;
+            
+            // Add event listener to remove button
+            columnTemplate.querySelector('.remove-column-btn').addEventListener('click', function() {
+                columnsContainer.removeChild(columnTemplate);
+            });
+            
+            columnsContainer.appendChild(columnTemplate);
+        }
+        
+        // Add initial column template
+        addColumnTemplate();
+        
+        // Add column button click event
+        addColumnBtn.addEventListener('click', addColumnTemplate);
+        
+        // Form submission handling
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            // Add a hidden input with the column count
+            const columnCountInput = document.createElement('input');
+            columnCountInput.type = 'hidden';
+            columnCountInput.name = 'column_count';
+            columnCountInput.value = columnCount;
+            form.appendChild(columnCountInput);
+        });
+    });
+</script>
+{% endif %}
+
+{% if table and is_new != True %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteColumnModal = document.getElementById('delete-column-modal');
+        const deleteColumnForm = document.getElementById('delete-column-form');
+        const deleteColumnName = document.getElementById('delete-column-name');
+        const cancelDelete = document.getElementById('cancel-delete');
+        
+        // Handle delete column button clicks
+        document.querySelectorAll('.delete-column').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const columnId = this.getAttribute('data-column-id');
+                const columnName = this.getAttribute('data-column-name');
+                
+                // Set form action URL
+                deleteColumnForm.action = '{% url "table_column_delete" 999 %}'.replace('999', columnId);
+                
+                // Set column name in modal
+                deleteColumnName.textContent = columnName;
+                
+                // Show modal
+                deleteColumnModal.classList.remove('hidden');
+            });
+        });
+        
+        // Handle cancel button click
+        cancelDelete.addEventListener('click', function() {
+            deleteColumnModal.classList.add('hidden');
+        });
+    });
+</script>
+{% endif %}
+{% endblock %} 
