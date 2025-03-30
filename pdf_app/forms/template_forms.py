@@ -9,7 +9,12 @@ class TemplateForm(forms.ModelForm):
     
     class Meta:
         model = Template
-        fields = ['name', 'configuration', 'description', 'pdf_file']
+        fields = [
+            'name', 'configuration', 'description', 'pdf_file',
+            'unnecessary_page_position', 'unnecessary_page_delta',
+            'has_watermarks', 'is_multi_account', 'account_text',
+            'first_page_width', 'first_page_height'
+        ]
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
@@ -26,6 +31,31 @@ class TemplateForm(forms.ModelForm):
             'pdf_file': forms.FileInput(attrs={
                 'class': 'form-control', 
                 'accept': 'application/pdf'
+            }),
+            'unnecessary_page_position': forms.Select(attrs={
+                'class': 'form-select rounded-md shadow-sm border-gray-300 w-full'
+            }),
+            'unnecessary_page_delta': forms.NumberInput(attrs={
+                'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
+                'min': '0'
+            }),
+            'has_watermarks': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox'
+            }),
+            'is_multi_account': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox'
+            }),
+            'account_text': forms.TextInput(attrs={
+                'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
+                'placeholder': 'Enter account text'
+            }),
+            'first_page_width': forms.NumberInput(attrs={
+                'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
+                'step': '0.01'
+            }),
+            'first_page_height': forms.NumberInput(attrs={
+                'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
+                'step': '0.01'
             }),
         }
     
@@ -51,7 +81,7 @@ class TemplateFieldForm(forms.ModelForm):
     
     class Meta:
         model = TemplateField
-        fields = ['name', 'custom_name', 'page', 'x', 'y', 'x1', 'y1', 'extracted_text']
+        fields = ['name', 'custom_name', 'page', 'x', 'y', 'x1', 'y1', 'extracted_text', 'ocr_required']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
@@ -82,6 +112,9 @@ class TemplateFieldForm(forms.ModelForm):
                 'step': '0.01'
             }),
             'extracted_text': forms.HiddenInput(),
+            'ocr_required': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox'
+            }),
         }
     
     def __init__(self, *args, **kwargs):

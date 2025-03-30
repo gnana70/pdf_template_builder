@@ -43,9 +43,9 @@
                 <p class="mt-2 text-sm text-gray-500">Name should be unique across all your templates</p>
             </div>
 
-            <div class="sm:col-span-6">
+            <div class="sm:col-span-3">
                 <label for="{{ form.configuration.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                    Project Configuration *
+                    Configuration *
                 </label>
                 <div class="mt-1">
                     {{ form.configuration }}
@@ -53,9 +53,30 @@
                 {% if form.configuration.errors %}
                 <p class="mt-2 text-sm text-red-600">{{ form.configuration.errors.0 }}</p>
                 {% endif %}
-                <p class="mt-2 text-sm text-gray-500">Select an active project configuration</p>
             </div>
 
+            <div class="sm:col-span-6">
+                <label for="{{ form.pdf_file.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {% if template %}Update {% endif %}PDF File {% if not template %}*{% endif %}
+                </label>
+                <div class="mt-1">
+                    {{ form.pdf_file }}
+                </div>
+                {% if form.pdf_file.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.pdf_file.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-2 text-sm text-gray-500">
+                    {% if template %}
+                    Upload a new PDF file to replace the current one (max size: 5MB)
+                    {% else %}
+                    Upload a PDF file as the template (max size: 5MB)
+                    {% endif %}
+                </p>
+                {% if template and template.pdf_file %}
+                <p class="mt-2 text-sm text-blue-600">Current file: {{ template.pdf_file.name|default:"No file" }}</p>
+                {% endif %}
+            </div>
+            
             <div class="sm:col-span-6">
                 <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">
                     Description
@@ -67,27 +88,101 @@
                 <p class="mt-2 text-sm text-red-600">{{ form.description.errors.0 }}</p>
                 {% endif %}
             </div>
-
-            <div class="sm:col-span-6">
-                <label for="{{ form.pdf_file.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                    PDF File *
+            
+            <div class="sm:col-span-6 border-t border-gray-200 pt-4">
+                <h3 class="text-lg font-medium text-gray-900 mb-3">Template Options</h3>
+            </div>
+            
+            <!-- Advertisement/Unnecessary page options -->
+            <div class="sm:col-span-3">
+                <label for="{{ form.unnecessary_page_position.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Advertisement/Unnecessary Page Position
                 </label>
                 <div class="mt-1">
-                    <div class="flex items-center">
-                        <div class="flex-grow">
-                            {{ form.pdf_file }}
-                        </div>
-                        {% if template and template.pdf_file %}
-                        <a href="{{ template.pdf_file.url }}" target="_blank" class="ml-3 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            <i class="fas fa-external-link-alt mr-2"></i> View Current PDF
-                        </a>
-                        {% endif %}
-                    </div>
+                    {{ form.unnecessary_page_position }}
                 </div>
-                {% if form.pdf_file.errors %}
-                <p class="mt-2 text-sm text-red-600">{{ form.pdf_file.errors.0 }}</p>
+                {% if form.unnecessary_page_position.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.unnecessary_page_position.errors.0 }}</p>
                 {% endif %}
-                <p class="mt-2 text-sm text-gray-500">Upload a PDF file for your template{% if template.pdf_file %} (leave empty to keep current file){% endif %}</p>
+            </div>
+            
+            <div class="sm:col-span-3">
+                <label for="{{ form.unnecessary_page_delta.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Delta
+                </label>
+                <div class="mt-1">
+                    {{ form.unnecessary_page_delta }}
+                </div>
+                {% if form.unnecessary_page_delta.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.unnecessary_page_delta.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-2 text-sm text-gray-500">Default: 0</p>
+            </div>
+            
+            <!-- Watermarks and multi-account options -->
+            <div class="sm:col-span-3">
+                <div class="flex items-center">
+                    {{ form.has_watermarks }}
+                    <label for="{{ form.has_watermarks.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-700">
+                        Contains Watermarks in Background
+                    </label>
+                </div>
+                {% if form.has_watermarks.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.has_watermarks.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="sm:col-span-3">
+                <div class="flex items-center">
+                    {{ form.is_multi_account }}
+                    <label for="{{ form.is_multi_account.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-700">
+                        Multi Account Statement
+                    </label>
+                </div>
+                {% if form.is_multi_account.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.is_multi_account.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="sm:col-span-6" id="account-text-container" {% if not template.is_multi_account %}style="display: none;"{% endif %}>
+                <label for="{{ form.account_text.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Account Text
+                </label>
+                <div class="mt-1">
+                    {{ form.account_text }}
+                </div>
+                {% if form.account_text.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.account_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Page dimensions -->
+            <div class="sm:col-span-6 border-t border-gray-200 pt-4 mt-2">
+                <h3 class="text-lg font-medium text-gray-900 mb-3">First Page Dimensions</h3>
+            </div>
+            
+            <div class="sm:col-span-3">
+                <label for="{{ form.first_page_width.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Width
+                </label>
+                <div class="mt-1">
+                    {{ form.first_page_width }}
+                </div>
+                {% if form.first_page_width.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.first_page_width.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="sm:col-span-3">
+                <label for="{{ form.first_page_height.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Height
+                </label>
+                <div class="mt-1">
+                    {{ form.first_page_height }}
+                </div>
+                {% if form.first_page_height.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.first_page_height.errors.0 }}</p>
+                {% endif %}
             </div>
         </div>
 
@@ -147,6 +242,19 @@
             if (firstErrorField) {
                 firstErrorField.focus();
             }
+        }
+
+        // Toggle account text field based on multi-account checkbox
+        const multiAccountCheckbox = document.getElementById('{{ form.is_multi_account.id_for_label }}');
+        const accountTextContainer = document.getElementById('account-text-container');
+        
+        if (multiAccountCheckbox && accountTextContainer) {
+            multiAccountCheckbox.addEventListener('change', function() {
+                accountTextContainer.style.display = this.checked ? 'block' : 'none';
+            });
+            
+            // Set initial state
+            accountTextContainer.style.display = multiAccountCheckbox.checked ? 'block' : 'none';
         }
     });
 </script>

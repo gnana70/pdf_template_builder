@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, FileResponse
 from pdf_app.models import Template, TemplateField, Configuration, PythonFunction
 from pdf_app.forms import TemplateForm, TemplateFieldForm
 import json
@@ -216,3 +216,20 @@ def get_configuration_data(request, template_pk):
         'tables': list(tables),
         'python_functions': list(python_functions)
     })  
+
+@login_required
+def template_dimensions(request, pk):
+    """Save first page dimensions from PDF."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Only POST method is allowed'}, status=405)
+    
+    template = get_object_or_404(Template, pk=pk, created_by=request.user)
+    
+    try:
+        data = json.loads(request.body)
+        template.first_page_width = data.get('width', 0)
+        template.first_page_height = data.get('height', 0)
+        template.save(update_fields=['first_page_width', 'first_page_height'])
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)  

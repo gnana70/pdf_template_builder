@@ -17,6 +17,8 @@
         overflow: auto;
         border: 1px solid #e5e7eb;
         position: relative;
+        display: flex;
+        flex-direction: column;
     }
     
     .fields-section {
@@ -29,6 +31,8 @@
     #pdf-container {
         position: relative;
         min-height: 200px;
+        flex: 1;
+        overflow: auto;
     }
     
     .selection-overlay {
@@ -70,6 +74,7 @@
         background-color: white;
         z-index: 10;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        flex-shrink: 0;
     }
     
     /* Loading animation */
@@ -127,10 +132,10 @@
                 <button id="prev-page" class="p-2 rounded-md bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50">
                     <i class="fas fa-chevron-left"></i>
                 </button>
-                <span>Page</span>
-                <div class="inline-flex items-center">
-                    <input type="number" min="1" id="page-input" class="w-12 border-gray-300 rounded-md text-center" value="1">
-                    <span class="mx-1">of <span id="page-count">1</span></span>
+                <div class="flex items-center whitespace-nowrap">
+                    <span>Page</span>
+                    <input type="number" min="1" id="page-input" class="w-12 border-gray-300 rounded-md text-center mx-1" value="1">
+                    <span>of <span id="page-count">1</span></span>
                 </div>
                 <button id="next-page" class="p-2 rounded-md bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50">
                     <i class="fas fa-chevron-right"></i>
@@ -145,8 +150,11 @@
                         <button id="zoom-in" class="p-2 hover:bg-gray-100 focus:outline-none">
                             <i class="fas fa-search-plus"></i>
                         </button>
-                        <span id="page-resolution" class="ml-3 text-xs text-gray-500"></span>
                     </div>
+                </div>
+                
+                <div class="ml-4 border-l border-gray-300 pl-4">
+                    <span id="page-dimensions" class="text-sm text-gray-600"></span>
                 </div>
             </div>
             <div>
@@ -247,6 +255,13 @@
                         </select>
                     </div>
                     <p class="mt-1 text-xs text-gray-500">Optional: Associate a Python function with this field for custom processing</p>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="ocr-required" name="ocr_required" class="form-checkbox">
+                        <label for="ocr-required" class="ml-2 block text-sm font-medium text-gray-700">OCR Required</label>
+                    </div>
                 </div>
                 
                 <div id="extracted-text-container" class="mb-3 hidden">
@@ -367,6 +382,7 @@
         const extractedTextContainer = document.getElementById('extracted-text-container');
         const extractedTextEl = document.getElementById('extracted-text');
         const extractedTextInput = document.getElementById('extracted-text-input');
+        const ocrRequiredInput = document.getElementById('ocr-required');
         
         // PDF.js variables
         let pdfDoc = null;
@@ -380,6 +396,44 @@
         let currentSelection = null;
         let selectionOverlay = null;
         let editingField = null;
+        
+        // When first page is rendered, capture dimensions
+        const updatePageDimensions = async (page) => {
+            if (page && page.pageNumber === 1) {
+                try {
+                    const viewport = page.getViewport({ scale: 1.0 });
+                    const width = viewport.width;
+                    const height = viewport.height;
+                    
+                    // Display dimensions in dedicated element
+                    const dimensionsEl = document.getElementById('page-dimensions');
+                    if (dimensionsEl) {
+                        dimensionsEl.textContent = `Page dimensions: ${width.toFixed(2)}×${height.toFixed(2)} pts`;
+                    }
+                    
+                    // Save dimensions to the template
+                    const pathParts = window.location.pathname.split('/').filter(Boolean);
+                    const templateId = pathParts[pathParts.length - 2];
+                    
+                    // Only save if dimensions are not already set
+                    const response = await fetch(`/templates/${templateId}/dimensions/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify({
+                            width: width,
+                            height: height
+                        })
+                    });
+                    
+                    // No need to handle response - this is a background update
+                } catch (err) {
+                    console.error('Error saving page dimensions:', err);
+                }
+            }
+        };
         
         // Load PDF document
         const loadPDF = async () => {
@@ -434,7 +488,7 @@
                 
                 loadingStatus.textContent = 'PDF loaded successfully';
                 
-                // Make sure loading indicator is hidden after everything is done
+                // Make sure loading indicator is hidden
                 pdfLoading.classList.add('hidden');
                 
                 // Render field overlays after PDF is loaded
@@ -453,18 +507,24 @@
             }
         };
         
-        // Render a page
-        const renderPage = async (pageNumber) => {
+        // Render PDF page
+        const renderPage = async (pageNum) => {
             if (pdfRendering) return;
+            
             pdfRendering = true;
             
             try {
-                // Validate page number
-                if (pageNumber < 1) pageNumber = 1;
-                if (pdfDoc && pageNumber > pdfDoc.numPages) pageNumber = pdfDoc.numPages;
+                // Get page
+                const page = await pdfDoc.getPage(pageNum);
                 
-                // Get the page
-                const page = await pdfDoc.getPage(pageNumber);
+                // Call updatePageDimensions for first page
+                if (pageNum === 1) {
+                    await updatePageDimensions(page);
+                }
+                
+                // Update page number input and display
+                pageInput.value = pageNum;
+                currentPage = pageNum;
                 
                 // Calculate viewport with scale
                 const viewport = page.getViewport({ scale });
@@ -478,7 +538,7 @@
                 // Create a wrapper div for the canvas with the page number as ID
                 const pageDiv = document.createElement('div');
                 pageDiv.className = 'pdf-page';
-                pageDiv.id = `page-${pageNumber}`;
+                pageDiv.id = `page-${pageNum}`;
                 pageDiv.style.position = 'relative';
                 pageDiv.appendChild(canvas);
                 
@@ -497,12 +557,12 @@
                 await page.render(renderContext).promise;
                 
                 // Update current page display
-                document.getElementById('page-input').value = pageNumber;
-                currentPage = pageNumber;
+                document.getElementById('page-input').value = pageNum;
+                currentPage = pageNum;
                 
                 // Update buttons state
-                prevPageBtn.disabled = pageNumber <= 1;
-                nextPageBtn.disabled = pageNumber >= pdfDoc.numPages;
+                prevPageBtn.disabled = pageNum <= 1;
+                nextPageBtn.disabled = pageNum >= pdfDoc.numPages;
                 
                 // Render field overlays for this page
                 renderFieldOverlays();
@@ -510,6 +570,8 @@
                 // Make sure loading indicator is hidden
                 pdfLoading.classList.add('hidden');
                 loadingStatus.textContent = 'PDF loaded successfully';
+                
+                await updatePageDimensions(page);
                 
                 pdfRendering = false;
             } catch (error) {
@@ -1040,13 +1102,9 @@
             }
         });
         
-        // Edit field function
+        // Edit field
         const editField = async (fieldId) => {
             try {
-                // Get template ID from URL path, using same logic as loadPDF
-                const pathParts = window.location.pathname.split('/').filter(Boolean);
-                const templateId = pathParts[pathParts.length - 2];
-                
                 // Fetch field data
                 const response = await fetch(`/templates/fields/${fieldId}/update/`, {
                     headers: {
@@ -1087,6 +1145,12 @@
                 fieldYInput.value = form.querySelector('[name="y"]').value;
                 fieldX1Input.value = form.querySelector('[name="x1"]').value;
                 fieldY1Input.value = form.querySelector('[name="y1"]').value;
+                
+                // Set OCR required if present
+                const ocrRequiredCheckbox = form.querySelector('[name="ocr_required"]');
+                if (ocrRequiredInput && ocrRequiredCheckbox) {
+                    ocrRequiredInput.checked = ocrRequiredCheckbox.checked;
+                }
                 
                 // Set Python function if present
                 const pythonFunctionSelect = document.getElementById('python-function');
@@ -1217,6 +1281,11 @@
                     formData.set('custom_name', customNameInput.value);
                 } else {
                     formData.set('custom_name', '');
+                }
+                
+                // Add OCR required value
+                if (ocrRequiredInput) {
+                    formData.set('ocr_required', ocrRequiredInput.checked);
                 }
                 
                 // Get template ID from URL path, using same logic as loadPDF

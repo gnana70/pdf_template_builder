@@ -25,10 +25,28 @@ class DocumentAdmin(admin.ModelAdmin):
 
 @admin.register(Template)
 class TemplateAdmin(admin.ModelAdmin):
-    list_display = ('name', 'configuration', 'created_by', 'created_at')
-    list_filter = ('configuration',)
+    list_display = ('name', 'configuration', 'created_by', 'created_at', 'has_watermarks', 'is_multi_account')
+    list_filter = ('configuration', 'has_watermarks', 'is_multi_account', 'unnecessary_page_position')
     search_fields = ('name', 'description')
     readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'description', 'configuration', 'pdf_file', 'status', 'created_by')
+        }),
+        ('Template Options', {
+            'fields': ('unnecessary_page_position', 'unnecessary_page_delta', 
+                       'has_watermarks', 'is_multi_account', 'account_text')
+        }),
+        ('Page Dimensions', {
+            'fields': ('first_page_width', 'first_page_height')
+        }),
+        ('Additional Settings', {
+            'fields': ('is_public', 'version')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
 
 
 class FieldInline(admin.TabularInline):
@@ -102,6 +120,6 @@ class TemplateFieldInline(admin.TabularInline):
 
 @admin.register(TemplateField)
 class TemplateFieldAdmin(admin.ModelAdmin):
-    list_display = ('name', 'template', 'custom_name', 'page')
-    list_filter = ('template', 'page')
+    list_display = ('name', 'template', 'custom_name', 'page', 'ocr_required')
+    list_filter = ('template', 'page', 'ocr_required')
     search_fields = ('name', 'template__name', 'custom_name')

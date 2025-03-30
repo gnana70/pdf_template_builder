@@ -15,7 +15,8 @@ from .views.python_function_views import (
 from pdf_app.views.template_views import (
     template_list, template_create, template_update, template_delete,
     template_configure, template_field_create, template_field_update, 
-    template_field_delete, extract_text_from_area, get_pdf_file, get_configuration_data
+    template_field_delete, extract_text_from_area, get_pdf_file, get_configuration_data,
+    template_dimensions
 )
 
 # Create a router for our API viewsets
@@ -82,6 +83,7 @@ urlpatterns = [
     path('templates/<int:template_pk>/extract-text/', extract_text_from_area, name='extract_text_from_area'),
     path('templates/<int:template_pk>/pdf/', get_pdf_file, name='get_template_pdf'),
     path('templates/<int:template_pk>/get-configuration-data/', get_configuration_data, name='get_configuration_data'),
+    path('templates/<int:pk>/dimensions/', template_dimensions, name='template_dimensions'),
     
     # API urls
     path('api/', include(router.urls)),

@@ -22,6 +22,12 @@ class PythonFunctionForm(forms.ModelForm):
         }
 
 class TemplateForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if self.user:
+            self.fields['configuration'].queryset = Configuration.objects.filter(created_by=self.user, status='active')
+            
     class Meta:
         model = Template
         fields = ['name', 'configuration', 'description', 'pdf_file']

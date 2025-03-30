@@ -53,6 +53,29 @@ class Template(models.Model):
     is_public = models.BooleanField(_('Public Template'), default=False)
     version = models.IntegerField(_('Version'), default=1)
     
+    # Advertisement/Unnecessary page options
+    UNNECESSARY_PAGE_CHOICES = [
+        ('first', _('First')),
+        ('last', _('Last')),
+    ]
+    unnecessary_page_position = models.CharField(
+        _('Unnecessary Page Position'),
+        max_length=5,
+        choices=UNNECESSARY_PAGE_CHOICES,
+        blank=True,
+        null=True
+    )
+    unnecessary_page_delta = models.IntegerField(_('Unnecessary Page Delta'), default=0)
+    
+    # Watermark and multi-account options
+    has_watermarks = models.BooleanField(_('Contains Watermarks'), default=False)
+    is_multi_account = models.BooleanField(_('Multi Account Statement'), default=False)
+    account_text = models.CharField(_('Account Text'), max_length=255, blank=True)
+    
+    # Page dimensions
+    first_page_width = models.FloatField(_('First Page Width'), default=0)
+    first_page_height = models.FloatField(_('First Page Height'), default=0)
+    
     class Meta:
         verbose_name = _('Template')
         verbose_name_plural = _('Templates')
@@ -104,6 +127,7 @@ class TemplateField(models.Model):
     y1 = models.FloatField(_('Height'))
     page = models.IntegerField(_('Page'), default=1)
     extracted_text = models.TextField(_('Extracted Text'), blank=True)
+    ocr_required = models.BooleanField(_('OCR Required'), default=False)
     
     class Meta:
         verbose_name = _('Template Field')

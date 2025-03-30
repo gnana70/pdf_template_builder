@@ -94,6 +94,18 @@
             <p class="mt-2 text-sm text-red-600">{{ form.y1.errors.0 }}</p>
             {% endif %}
         </div>
+        
+        <div class="sm:col-span-6">
+            <div class="flex items-center">
+                {{ form.ocr_required }}
+                <label for="{{ form.ocr_required.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-700">
+                    OCR Required
+                </label>
+            </div>
+            {% if form.ocr_required.errors %}
+            <p class="mt-2 text-sm text-red-600">{{ form.ocr_required.errors.0 }}</p>
+            {% endif %}
+        </div>
     </div>
 
     <div class="flex justify-end space-x-3">
