@@ -11,197 +11,330 @@
     .template-row:hover {
         background-color: rgba(243, 244, 246, 0.5);
     }
+    
+    .card-actions {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .action-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.375rem;
+        transition: all 150ms ease-in-out;
+    }
+    
+    .action-button:hover {
+        transform: translateY(-1px);
+    }
+    
+    .template-card {
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .template-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .gradient-border {
+        position: relative;
+    }
+    
+    .gradient-border::before {
+        content: "";
+        position: absolute;
+        inset: -0.5px;
+        border-radius: 0.5rem;
+        background: linear-gradient(to right, #4f46e5, #3b82f6);
+        z-index: 0;
+        opacity: 0.25;
+        transition: opacity 0.3s ease;
+    }
+    
+    .gradient-border:hover::before {
+        opacity: 1;
+    }
+    
+    .gradient-border > * {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .description-cell {
+        position: relative;
+    }
+    
+    .description-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 200px;
+        display: inline-block;
+    }
+    
+    .description-tooltip {
+        visibility: hidden;
+        position: absolute;
+        z-index: 100;
+        background-color: #333;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        width: 300px;
+        top: 100%;
+        left: 0;
+        opacity: 0;
+        transition: opacity 0.3s;
+        white-space: normal;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        pointer-events: none;
+    }
+    
+    .description-cell:hover .description-tooltip {
+        visibility: visible;
+        opacity: 1;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Templates</h1>
-            <p class="mt-1 max-w-2xl text-sm text-gray-500">Manage your PDF templates for data extraction</p>
-        </div>
-        <a href="{% url 'template_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            <i class="fas fa-plus mr-2"></i> New Template
-        </a>
-    </div>
-</div>
-
-<!-- Search and filters -->
-<div class="bg-white shadow-sm rounded-lg p-4 mb-6">
-    <form method="get" action="{% url 'template_list' %}" class="md:flex md:items-center">
-        <div class="flex-1 min-w-0">
-            <div class="relative rounded-md">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400"></i>
+<div class="py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="relative group mb-8">
+            <div class="absolute -inset-0.5 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-200"></div>
+            <div class="relative bg-white shadow-lg rounded-lg p-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Templates</h1>
+                        <p class="mt-1 max-w-2xl text-sm text-gray-500">Manage your PDF templates for data extraction</p>
+                    </div>
+                    <a href="{% url 'template_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-plus mr-2"></i> New Template
+                    </a>
                 </div>
-                <input type="text" name="search" id="search" value="{{ search_query }}" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md" placeholder="Search templates">
             </div>
         </div>
-        <div class="mt-4 md:mt-0 md:ml-4">
-            <select name="status" id="status" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                <option value="" {% if not status_filter %}selected{% endif %}>All statuses</option>
-                <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
-                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
-                <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>Archived</option>
-            </select>
-        </div>
-        <div class="mt-4 md:mt-0 md:ml-4">
-            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-filter mr-2"></i> Filter
-            </button>
-            <a href="{% url 'template_list' %}" class="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-times mr-2"></i> Clear
-            </a>
-        </div>
-    </form>
-</div>
 
-{% if templates %}
-<!-- List view -->
-<div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Configuration</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for template in templates %}
-                <tr class="template-row">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            <div class="ml-0">
-                                <div class="text-sm font-medium text-gray-900">{{ template.name }}</div>
-                                <div class="text-sm text-gray-500 line-clamp-1">
-                                    {% if template.description %}
-                                    {{ template.description }}
-                                    {% else %}
-                                    <span class="italic text-gray-400">No description</span>
-                                    {% endif %}
-                                </div>
+        <!-- Search and filters -->
+        <div class="gradient-border mb-6">
+            <div class="bg-white shadow-sm rounded-lg p-4">
+                <form method="get" action="{% url 'template_list' %}" class="md:flex md:items-center">
+                    <div class="flex-1 min-w-0">
+                        <div class="relative rounded-md">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search text-gray-400"></i>
                             </div>
+                            <input type="text" name="search" id="search" value="{{ search_query }}" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 py-2 border-gray-300 rounded-md" placeholder="Search templates">
                         </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">{{ template.configuration.name }}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        {% if template.status == 'draft' %}
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            Draft
-                        </span>
-                        {% elif template.status == 'active' %}
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            Active
-                        </span>
-                        {% elif template.status == 'archived' %}
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                            Archived
-                        </span>
-                        {% endif %}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ template.created_at|date:"M d, Y" }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <a href="{% url 'template_configure' pk=template.id %}" class="text-indigo-600 hover:text-indigo-900 mr-3" title="Configure template">
-                            <i class="fas fa-cog"></i>
+                    </div>
+                    <div class="mt-4 md:mt-0 md:ml-4">
+                        <select name="status" id="status" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                            <option value="" {% if not status_filter %}selected{% endif %}>All statuses</option>
+                            <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                            <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>Archived</option>
+                        </select>
+                    </div>
+                    <div class="mt-4 md:mt-0 md:ml-4">
+                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-filter mr-2"></i> Filter
+                        </button>
+                        <a href="{% url 'template_list' %}" class="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-times mr-2"></i> Clear
                         </a>
-                        <a href="{% url 'template_update' pk=template.id %}" class="text-blue-600 hover:text-blue-900 mr-3" title="Edit template">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <a href="{% url 'template_delete' pk=template.id %}" class="text-red-600 hover:text-red-900" title="Delete template">
-                            <i class="fas fa-trash"></i>
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Pagination -->
-{% if is_paginated %}
-<div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg">
-    <div class="flex-1 flex justify-between sm:hidden">
-        {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-            Previous
-        </a>
-        {% endif %}
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-            Next
-        </a>
-        {% endif %}
-    </div>
-    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-        <div>
-            <p class="text-sm text-gray-700">
-                Showing
-                <span class="font-medium">{{ page_obj.start_index }}</span>
-                to
-                <span class="font-medium">{{ page_obj.end_index }}</span>
-                of
-                <span class="font-medium">{{ paginator.count }}</span>
-                results
-            </p>
+                    </div>
+                </form>
+            </div>
         </div>
-        <div>
-            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                    <span class="sr-only">Previous</span>
-                    <i class="fas fa-chevron-left h-5 w-5"></i>
-                </a>
-                {% endif %}
-                
-                {% for i in paginator.page_range %}
-                    {% if page_obj.number == i %}
-                    <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-indigo-50 text-sm font-medium text-indigo-600">
-                        {{ i }}
-                    </span>
-                    {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
-                    <a href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        {{ i }}
+
+        {% if templates %}
+        <!-- List view -->
+        <div class="template-card gradient-border mb-6">
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-indigo-100">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">Name</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">Configuration</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">Status</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">Created By</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">Created On</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for template in templates %}
+                            <tr class="template-row">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="ml-0">
+                                            <div class="text-sm font-medium text-gray-900">{{ template.name }}</div>
+                                            <div class="text-sm text-gray-500 description-cell">
+                                                {% if template.description %}
+                                                <span class="description-text">{{ template.description }}</span>
+                                                <div class="description-tooltip">{{ template.description }}</div>
+                                                {% else %}
+                                                <span class="italic text-gray-400">No description</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">{{ template.configuration.name }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        {% if template.status == 'draft' %}
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 mr-2">
+                                            Draft
+                                        </span>
+                                        {% elif template.status == 'active' %}
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 mr-2">
+                                            Active
+                                        </span>
+                                        {% elif template.status == 'archived' %}
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 mr-2">
+                                            Archived
+                                        </span>
+                                        {% endif %}
+                                        
+                                        <div class="relative" x-data="{ open: false }">
+                                            <button @click="open = !open" class="text-gray-400 hover:text-gray-600">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <div x-show="open" @click.away="open = false" class="origin-top-right absolute right-0 mt-2 w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10" role="menu" aria-orientation="vertical">
+                                                <div class="py-1" role="none">
+                                                    <button class="status-change-btn text-left w-full block px-4 py-2 text-sm {% if template.status == 'draft' %}text-gray-400 cursor-not-allowed{% else %}text-gray-700 hover:bg-gray-100 hover:text-gray-900{% endif %}" role="menuitem" data-template-id="{{ template.id }}" data-status="draft" {% if template.status == 'draft' %}disabled{% endif %}>
+                                                        Set as Draft
+                                                    </button>
+                                                    <button class="status-change-btn text-left w-full block px-4 py-2 text-sm {% if template.status == 'active' %}text-gray-400 cursor-not-allowed{% else %}text-gray-700 hover:bg-gray-100 hover:text-gray-900{% endif %}" role="menuitem" data-template-id="{{ template.id }}" data-status="active" {% if template.status == 'active' %}disabled{% endif %}>
+                                                        Set as Active
+                                                    </button>
+                                                    <button class="status-change-btn text-left w-full block px-4 py-2 text-sm {% if template.status == 'archived' %}text-gray-400 cursor-not-allowed{% else %}text-gray-700 hover:bg-gray-100 hover:text-gray-900{% endif %}" role="menuitem" data-template-id="{{ template.id }}" data-status="archived" {% if template.status == 'archived' %}disabled{% endif %}>
+                                                        Archive
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-500">
+                                        {{ template.created_by.username|default:"Unknown" }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ template.created_at|date:"M d, Y" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <a href="{% url 'template_configure' pk=template.id %}" class="text-indigo-600 hover:text-indigo-900 mr-3" title="Configure template">
+                                        <i class="fas fa-cog"></i>
+                                    </a>
+                                    <a href="{% url 'template_update' pk=template.id %}" class="text-blue-600 hover:text-blue-900 mr-3" title="Edit template">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'template_delete' pk=template.id %}" class="text-red-600 hover:text-red-900" title="Delete template">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="gradient-border mt-4">
+            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Previous
                     </a>
                     {% endif %}
-                {% endfor %}
-                
-                {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                    <span class="sr-only">Next</span>
-                    <i class="fas fa-chevron-right h-5 w-5"></i>
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Next
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing
+                            <span class="font-medium">{{ page_obj.start_index }}</span>
+                            to
+                            <span class="font-medium">{{ page_obj.end_index }}</span>
+                            of
+                            <span class="font-medium">{{ paginator.count }}</span>
+                            results
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">Previous</span>
+                                <i class="fas fa-chevron-left h-5 w-5"></i>
+                            </a>
+                            {% endif %}
+                            
+                            {% for i in paginator.page_range %}
+                                {% if page_obj.number == i %}
+                                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-indigo-50 text-sm font-medium text-indigo-600">
+                                    {{ i }}
+                                </span>
+                                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                                <a href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    {{ i }}
+                                </a>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">Next</span>
+                                <i class="fas fa-chevron-right h-5 w-5"></i>
+                            </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="relative group">
+            <div class="absolute -inset-0.5 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-200"></div>
+            <div class="relative bg-white shadow-md rounded-lg p-6 text-center">
+                <div class="text-gray-400 mb-4">
+                    <i class="fas fa-file-pdf text-6xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No templates found</h3>
+                <p class="text-gray-500 mb-4">{% if search_query or status_filter %}No templates match your filters. <a href="{% url 'template_list' %}" class="text-indigo-600 hover:text-indigo-900">Clear filters</a>{% else %}Create your first template to start extracting data from PDFs{% endif %}</p>
+                {% if not search_query and not status_filter %}
+                <a href="{% url 'template_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-plus mr-2"></i> Create Template
                 </a>
                 {% endif %}
-            </nav>
+            </div>
         </div>
+        {% endif %}
     </div>
 </div>
-{% endif %}
-
-{% else %}
-<div class="bg-white shadow-md rounded-lg p-6 text-center">
-    <div class="text-gray-400 mb-4">
-        <i class="fas fa-file-pdf text-6xl"></i>
-    </div>
-    <h3 class="text-lg font-medium text-gray-900 mb-2">No templates found</h3>
-    <p class="text-gray-500 mb-4">{% if search_query or status_filter %}No templates match your filters. <a href="{% url 'template_list' %}" class="text-indigo-600 hover:text-indigo-900">Clear filters</a>{% else %}Create your first template to start extracting data from PDFs{% endif %}</p>
-    {% if not search_query and not status_filter %}
-    <a href="{% url 'template_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-        <i class="fas fa-plus mr-2"></i> Create Template
-    </a>
-    {% endif %}
-</div>
-{% endif %}
-
 {% endblock %}
 
 {% block extra_js %}
@@ -211,6 +344,93 @@
         const searchInput = document.getElementById('search');
         if (searchInput.value) {
             searchInput.select();
+        }
+        
+        // Live search implementation
+        let debounceTimer;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function() {
+                const form = searchInput.closest('form');
+                form.submit();
+            }, 500); // 500ms debounce time
+        });
+        
+        // Status filter change triggers search
+        const statusFilter = document.getElementById('status');
+        statusFilter.addEventListener('change', function() {
+            const form = this.closest('form');
+            form.submit();
+        });
+        
+        // Status change buttons
+        const statusChangeButtons = document.querySelectorAll('.status-change-btn');
+        statusChangeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                if (this.disabled) {
+                    return;
+                }
+                
+                const templateId = this.getAttribute('data-template-id');
+                const newStatus = this.getAttribute('data-status');
+                
+                // Show loading state
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+                this.disabled = true;
+                
+                // Send AJAX request to update status
+                fetch(`/templates/${templateId}/update-status/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        status: newStatus
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Reload the page to reflect the changes
+                        window.location.reload();
+                    } else {
+                        // Handle error
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                        alert('Failed to update status: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    // Handle error
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                    console.error('Error:', error);
+                    alert('Failed to update status: ' + error.message);
+                });
+            });
+        });
+        
+        // Utility function to get CSRF cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
         }
     });
 </script>

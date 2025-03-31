@@ -2,7 +2,7 @@
 Template forms for PDF Template Builder.
 """
 from django import forms
-from pdf_app.models import Template, TemplateField, Configuration
+from pdf_app.models import Template, TemplateField, Configuration, TemplatePagePosition
 
 class TemplateForm(forms.ModelForm):
     """Form for Template model."""
@@ -12,9 +12,10 @@ class TemplateForm(forms.ModelForm):
         fields = [
             'name', 'configuration', 'description', 'pdf_file',
             'unique_identifier_text', 'identifier_page',
-            'unnecessary_page_position', 'unnecessary_page_delta',
+            'unnecessary_page_position', 'unnecessary_page_delta',  # Legacy fields kept for data integrity
             'has_watermarks', 'is_multi_account', 'account_text',
-            'first_page_width', 'first_page_height'
+            'is_dot_matrix', 'is_encoded_text', 'has_invisible_text', 'has_page_numbers',
+            'first_page_width', 'first_page_height', 'status'
         ]
         widgets = {
             'name': forms.TextInput(attrs={
@@ -41,12 +42,15 @@ class TemplateForm(forms.ModelForm):
                 'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
                 'min': '1'
             }),
+            # Legacy fields - hidden in UI but kept in form
             'unnecessary_page_position': forms.Select(attrs={
-                'class': 'form-select rounded-md shadow-sm border-gray-300 w-full'
+                'class': 'form-select rounded-md shadow-sm border-gray-300 w-full',
+                'style': 'display: none;'
             }),
             'unnecessary_page_delta': forms.NumberInput(attrs={
                 'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
-                'min': '0'
+                'min': '0',
+                'style': 'display: none;'
             }),
             'has_watermarks': forms.CheckboxInput(attrs={
                 'class': 'form-checkbox'
@@ -58,6 +62,18 @@ class TemplateForm(forms.ModelForm):
                 'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
                 'placeholder': 'Enter account text'
             }),
+            'is_dot_matrix': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox'
+            }),
+            'is_encoded_text': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox'
+            }),
+            'has_invisible_text': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox'
+            }),
+            'has_page_numbers': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox'
+            }),
             'first_page_width': forms.NumberInput(attrs={
                 'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
                 'step': '0.01'
@@ -65,6 +81,9 @@ class TemplateForm(forms.ModelForm):
             'first_page_height': forms.NumberInput(attrs={
                 'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
                 'step': '0.01'
+            }),
+            'status': forms.Select(attrs={
+                'class': 'form-select rounded-md shadow-sm border-gray-300 w-full'
             }),
         }
     
@@ -152,4 +171,32 @@ class TemplateFieldForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # If the field already has a custom name, set the checkbox as checked
         if self.instance and self.instance.pk and self.instance.custom_name:
-            self.initial['custom_name_enabled'] = True 
+            self.initial['custom_name_enabled'] = True
+
+
+class TemplatePagePositionForm(forms.ModelForm):
+    """Form for TemplatePagePosition model."""
+    
+    class Meta:
+        model = TemplatePagePosition
+        fields = ['position', 'delta', 'page_number']
+        widgets = {
+            'position': forms.Select(attrs={
+                'class': 'form-select rounded-md shadow-sm border-gray-300 w-full',
+            }),
+            'delta': forms.NumberInput(attrs={
+                'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
+                'min': '0'
+            }),
+            'page_number': forms.NumberInput(attrs={
+                'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
+                'min': '1'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add help texts
+        self.fields['position'].help_text = 'Select the page position (first, last, or custom page)'
+        self.fields['delta'].help_text = 'Enter the delta value for this page position'
+        self.fields['page_number'].help_text = 'Enter the page number (only if position is custom)' 

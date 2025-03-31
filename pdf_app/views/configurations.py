@@ -135,7 +135,19 @@ def process_fields(fields_data, configuration):
         except json.JSONDecodeError:
             return
     
+    # Track field names to ensure uniqueness within this configuration
+    field_names = set()
+    
     for field_data in fields_data:
+        field_name = field_data.get('name', '').strip()
+        
+        # Skip if name is empty or already used
+        if not field_name or field_name.lower() in field_names:
+            continue
+        
+        # Add name to the set to track it
+        field_names.add(field_name.lower())
+        
         # Get the Python function if selected
         python_function = None
         if field_data.get('python_function'):
@@ -147,7 +159,7 @@ def process_fields(fields_data, configuration):
         
         Field.objects.create(
             configuration=configuration,
-            name=field_data.get('name'),
+            name=field_name,
             type=field_data.get('type', 'string'),
             min_length=field_data.get('min_length'),
             max_length=field_data.get('max_length'),
@@ -164,15 +176,40 @@ def process_tables(tables_data, configuration):
         except json.JSONDecodeError:
             return
     
+    # Track table names to ensure uniqueness within this configuration
+    table_names = set()
+    
     for table_data in tables_data:
+        table_name = table_data.get('name', '').strip()
+        
+        # Skip if name is empty or already used
+        if not table_name or table_name.lower() in table_names:
+            continue
+            
+        # Add name to the set to track it
+        table_names.add(table_name.lower())
+        
         table = Table.objects.create(
             configuration=configuration,
-            name=table_data.get('name')
+            name=table_name
         )
         
         # Process columns
         columns_data = table_data.get('columns', [])
+        
+        # Track column names to ensure uniqueness within this table
+        column_names = set()
+        
         for column_data in columns_data:
+            column_name = column_data.get('name', '').strip()
+            
+            # Skip if name is empty or already used
+            if not column_name or column_name.lower() in column_names:
+                continue
+                
+            # Add name to the set to track it
+            column_names.add(column_name.lower())
+            
             # Get the Python function if selected
             python_function = None
             if column_data.get('python_function'):
@@ -184,7 +221,7 @@ def process_tables(tables_data, configuration):
             
             Column.objects.create(
                 table=table,
-                name=column_data.get('name'),
+                name=column_name,
                 type=column_data.get('type', 'string'),
                 min_length=column_data.get('min_length'),
                 max_length=column_data.get('max_length'),

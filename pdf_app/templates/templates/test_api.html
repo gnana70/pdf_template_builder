@@ -1,0 +1,245 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}API Test Page{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
+    <div class="px-4 py-5 sm:px-6">
+        <h1 class="text-2xl font-bold text-gray-900">API Test Page</h1>
+        <p class="mt-1 max-w-2xl text-sm text-gray-500">
+            Test the page position API endpoints
+        </p>
+    </div>
+</div>
+
+<div class="bg-white shadow overflow-hidden sm:rounded-lg p-6">
+    <h2 class="text-lg font-medium text-gray-900 mb-4">Page Position API Tests</h2>
+    
+    <!-- Template ID input -->
+    <div class="mb-4">
+        <label for="template-id" class="block text-sm font-medium text-gray-700">Template ID</label>
+        <input type="number" id="template-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="1">
+    </div>
+    
+    <!-- Create new position form -->
+    <div class="mb-6 p-4 border border-gray-200 rounded-md">
+        <h3 class="text-md font-medium text-gray-900 mb-3">Create New Position</h3>
+        
+        <div class="grid grid-cols-3 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Position</label>
+                <select id="new-position" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="first">First</option>
+                    <option value="last">Last</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Delta</label>
+                <input type="number" id="new-delta" value="0" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div id="new-page-number-container" class="hidden">
+                <label class="block text-sm font-medium text-gray-700">Page Number</label>
+                <input type="number" id="new-page-number" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+        </div>
+        
+        <button id="create-position-btn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Create Position
+        </button>
+    </div>
+    
+    <!-- Update position form -->
+    <div class="mb-6 p-4 border border-gray-200 rounded-md">
+        <h3 class="text-md font-medium text-gray-900 mb-3">Update Position</h3>
+        
+        <div class="grid grid-cols-4 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Position ID</label>
+                <input type="text" id="update-position-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Position</label>
+                <select id="update-position" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="first">First</option>
+                    <option value="last">Last</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Delta</label>
+                <input type="number" id="update-delta" value="0" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div id="update-page-number-container" class="hidden">
+                <label class="block text-sm font-medium text-gray-700">Page Number</label>
+                <input type="number" id="update-page-number" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+        </div>
+        
+        <button id="update-position-btn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Update Position
+        </button>
+    </div>
+    
+    <!-- Delete position form -->
+    <div class="mb-6 p-4 border border-gray-200 rounded-md">
+        <h3 class="text-md font-medium text-gray-900 mb-3">Delete Position</h3>
+        
+        <div class="grid grid-cols-1 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Position ID</label>
+                <input type="text" id="delete-position-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+        </div>
+        
+        <button id="delete-position-btn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+            Delete Position
+        </button>
+    </div>
+    
+    <!-- Results container -->
+    <div class="mt-6">
+        <h3 class="text-md font-medium text-gray-900 mb-3">Results</h3>
+        <div id="results-container" class="p-4 bg-gray-50 rounded-md font-mono text-sm overflow-auto" style="max-height: 300px;">
+            <div class="text-gray-500">Results will appear here...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // References to elements
+        const templateId = $('#template-id');
+        const resultsContainer = $('#results-container');
+        const csrfToken = '{{ csrf_token }}';
+        
+        // Show/hide page number field based on position selection
+        $('#new-position').change(function() {
+            $('#new-page-number-container').toggleClass('hidden', $(this).val() !== 'custom');
+        });
+        
+        $('#update-position').change(function() {
+            $('#update-page-number-container').toggleClass('hidden', $(this).val() !== 'custom');
+        });
+        
+        // Create new position
+        $('#create-position-btn').click(function() {
+            const templateIdValue = templateId.val();
+            const position = $('#new-position').val();
+            const delta = $('#new-delta').val();
+            let pageNumber = null;
+            
+            if (position === 'custom') {
+                pageNumber = $('#new-page-number').val();
+            }
+            
+            const data = {
+                position: position,
+                delta: delta,
+                page_number: pageNumber
+            };
+            
+            // Make API call
+            $.ajax({
+                url: `/templates/${templateIdValue}/page-positions/new/`,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function(response) {
+                    showResult('Create Success', response);
+                },
+                error: function(xhr, status, error) {
+                    showResult('Create Error', xhr.responseText || error);
+                }
+            });
+        });
+        
+        // Update position
+        $('#update-position-btn').click(function() {
+            const templateIdValue = templateId.val();
+            const positionId = $('#update-position-id').val();
+            const position = $('#update-position').val();
+            const delta = $('#update-delta').val();
+            let pageNumber = null;
+            
+            if (position === 'custom') {
+                pageNumber = $('#update-page-number').val();
+            }
+            
+            const data = {
+                position: position,
+                delta: delta,
+                page_number: pageNumber
+            };
+            
+            // Make API call
+            $.ajax({
+                url: `/templates/${templateIdValue}/page-positions/${positionId}/`,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function(response) {
+                    showResult('Update Success', response);
+                },
+                error: function(xhr, status, error) {
+                    showResult('Update Error', xhr.responseText || error);
+                }
+            });
+        });
+        
+        // Delete position
+        $('#delete-position-btn').click(function() {
+            const templateIdValue = templateId.val();
+            const positionId = $('#delete-position-id').val();
+            
+            // Make API call
+            $.ajax({
+                url: `/templates/${templateIdValue}/page-positions/${positionId}/`,
+                type: 'DELETE',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                success: function(response) {
+                    showResult('Delete Success', response);
+                },
+                error: function(xhr, status, error) {
+                    showResult('Delete Error', xhr.responseText || error);
+                }
+            });
+        });
+        
+        // Helper to show results
+        function showResult(title, data) {
+            let content;
+            if (typeof data === 'object') {
+                content = JSON.stringify(data, null, 2);
+            } else {
+                content = data;
+            }
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const resultHtml = `
+                <div class="mb-4 pb-4 border-b border-gray-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold">${title}</h4>
+                        <span class="text-gray-500 text-xs">${timestamp}</span>
+                    </div>
+                    <pre class="bg-white p-2 rounded border border-gray-200 whitespace-pre-wrap">${content}</pre>
+                </div>
+            `;
+            
+            resultsContainer.html(resultHtml + resultsContainer.html());
+        }
+    });
+</script>
+{% endblock %} 

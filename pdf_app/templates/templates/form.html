@@ -72,6 +72,19 @@
                 {% endif %}
             </div>
 
+            <div class="sm:col-span-3">
+                <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Status
+                </label>
+                <div class="mt-1">
+                    {{ form.status }}
+                </div>
+                {% if form.status.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.status.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-2 text-sm text-gray-500">Draft, Active, or Archived</p>
+            </div>
+
             <div class="sm:col-span-6">
                 <label for="{{ form.pdf_file.id_for_label }}" class="block text-sm font-medium text-gray-700">
                     {% if template %}Update {% endif %}PDF File {% if not template %}*{% endif %}
@@ -171,12 +184,12 @@
                 <div id="pdf-images-section" class="border rounded-md bg-gray-50" style="display: {% if template and template.pdf_file %}block{% else %}none{% endif %};">
                     <div class="px-4 py-3 border-b bg-gray-100">
                         <div class="flex justify-between items-center">
-                            <h3 class="text-lg font-medium text-gray-900">Extract Images</h3>
+                            <h3 class="text-lg font-medium text-gray-900">Unique Identifier Image</h3>
                             <button type="button" id="extract-images-btn" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                                 <i class="fas fa-images mr-2"></i> Extract PDF Images
                             </button>
                         </div>
-                        <p class="mt-1 text-sm text-gray-500">Extract images from the first and last pages of the PDF file</p>
+                        <p class="mt-1 text-sm text-gray-500">Extract unique identifier images from the PDF to help with template recognition</p>
                     </div>
                     
                     <div id="image-section-loader" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10" style="display: none;">
@@ -243,31 +256,84 @@
                 <h3 class="text-lg font-medium text-gray-900 mb-3">Template Options</h3>
             </div>
             
-            <!-- Advertisement/Unnecessary page options -->
-            <div class="sm:col-span-3">
-                <label for="{{ form.unnecessary_page_position.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                    Advertisement/Unnecessary Page Position
-                </label>
-                <div class="mt-1">
-                    {{ form.unnecessary_page_position }}
+            <!-- Multiple Page Positions Section -->
+            <div class="sm:col-span-6 mt-4">
+                <div class="flex justify-between items-center">
+                    <h4 class="text-md font-medium text-gray-900">Unnecessary Page Positions & Delta Page Values</h4>
+                    <button type="button" id="add-page-position-btn" class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-plus mr-1"></i> Add Position
+                    </button>
                 </div>
-                {% if form.unnecessary_page_position.errors %}
-                <p class="mt-2 text-sm text-red-600">{{ form.unnecessary_page_position.errors.0 }}</p>
-                {% endif %}
+                
+                <div id="page-positions-container" class="mt-3 border border-gray-200 rounded-md divide-y divide-gray-200">
+                    {% if template.page_positions.all %}
+                        {% for pos in template.page_positions.all %}
+                            <div class="page-position-item p-4 flex items-center justify-between" data-id="{{ pos.id }}">
+                                <div class="flex-1 grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Position</label>
+                                        <select name="position[]" class="mt-1 position-select form-select rounded-md shadow-sm border-gray-300 w-full">
+                                            <option value="first" {% if pos.position == 'first' %}selected{% endif %}>First</option>
+                                            <option value="last" {% if pos.position == 'last' %}selected{% endif %}>Last</option>
+                                            <option value="custom" {% if pos.position == 'custom' %}selected{% endif %}>Custom</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Delta</label>
+                                        <input type="number" name="delta[]" value="{{ pos.delta }}" min="0" class="mt-1 form-input rounded-md shadow-sm border-gray-300 w-full">
+                                    </div>
+                                    <div class="page-number-field {% if pos.position != 'custom' %}hidden{% endif %}">
+                                        <label class="block text-sm font-medium text-gray-700">Page Number</label>
+                                        <input type="number" name="page_number[]" value="{{ pos.page_number|default:'' }}" min="1" class="mt-1 form-input rounded-md shadow-sm border-gray-300 w-full">
+                                    </div>
+                                </div>
+                                <div class="ml-4 flex space-x-2">
+                                    <button type="button" class="save-page-position-btn text-green-500 hover:text-green-700" title="Save changes">
+                                        <i class="fas fa-save"></i>
+                                    </button>
+                                    <button type="button" class="remove-page-position-btn text-red-500 hover:text-red-700" title="Remove position">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="p-4 text-center text-gray-500">No page positions defined yet. Click "Add Position" to add one.</div>
+                    {% endif %}
+                </div>
             </div>
             
-            <div class="sm:col-span-3">
-                <label for="{{ form.unnecessary_page_delta.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                    Delta
-                </label>
-                <div class="mt-1">
-                    {{ form.unnecessary_page_delta }}
+            <!-- Template for new page position -->
+            <template id="page-position-template">
+                <div class="page-position-item p-4 flex items-center justify-between" data-id="new">
+                    <div class="flex-1 grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Position</label>
+                            <select name="position[]" class="mt-1 position-select form-select rounded-md shadow-sm border-gray-300 w-full">
+                                <option value="first">First</option>
+                                <option value="last">Last</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Delta</label>
+                            <input type="number" name="delta[]" value="0" min="0" class="mt-1 form-input rounded-md shadow-sm border-gray-300 w-full">
+                        </div>
+                        <div class="page-number-field hidden">
+                            <label class="block text-sm font-medium text-gray-700">Page Number</label>
+                            <input type="number" name="page_number[]" min="1" class="mt-1 form-input rounded-md shadow-sm border-gray-300 w-full">
+                        </div>
+                    </div>
+                    <div class="ml-4 flex space-x-2">
+                        <button type="button" class="save-page-position-btn text-green-500 hover:text-green-700" title="Save position">
+                            <i class="fas fa-save"></i>
+                        </button>
+                        <button type="button" class="remove-page-position-btn text-red-500 hover:text-red-700" title="Remove position">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
-                {% if form.unnecessary_page_delta.errors %}
-                <p class="mt-2 text-sm text-red-600">{{ form.unnecessary_page_delta.errors.0 }}</p>
-                {% endif %}
-                <p class="mt-2 text-sm text-gray-500">Default: 0</p>
-            </div>
+            </template>
             
             <!-- Watermarks and multi-account options -->
             <div class="sm:col-span-3">
@@ -291,6 +357,55 @@
                 </div>
                 {% if form.is_multi_account.errors %}
                 <p class="mt-2 text-sm text-red-600">{{ form.is_multi_account.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Special document types -->
+            <div class="sm:col-span-3">
+                <div class="flex items-center">
+                    {{ form.is_dot_matrix }}
+                    <label for="{{ form.is_dot_matrix.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-700">
+                        Dot Matrix File
+                    </label>
+                </div>
+                {% if form.is_dot_matrix.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.is_dot_matrix.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="sm:col-span-3">
+                <div class="flex items-center">
+                    {{ form.is_encoded_text }}
+                    <label for="{{ form.is_encoded_text.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-700">
+                        Encoded Text File
+                    </label>
+                </div>
+                {% if form.is_encoded_text.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.is_encoded_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="sm:col-span-3">
+                <div class="flex items-center">
+                    {{ form.has_invisible_text }}
+                    <label for="{{ form.has_invisible_text.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-700">
+                        Contains Invisible Text
+                    </label>
+                </div>
+                {% if form.has_invisible_text.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.has_invisible_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="sm:col-span-3">
+                <div class="flex items-center">
+                    {{ form.has_page_numbers }}
+                    <label for="{{ form.has_page_numbers.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-700">
+                        Page Numbers Available
+                    </label>
+                </div>
+                {% if form.has_page_numbers.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.has_page_numbers.errors.0 }}</p>
                 {% endif %}
             </div>
             
@@ -360,6 +475,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
 <script src="{% static 'js/pdf_viewer.js' %}"></script>
 <script src="{% static 'js/template_images.js' %}"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('template-form');
@@ -504,6 +620,200 @@
             // Set initial state
             accountTextContainer.style.display = multiAccountCheckbox.checked ? 'block' : 'none';
         }
+    });
+    
+    // Page positions handling with jQuery
+    $(document).ready(function() {
+        const container = $('#page-positions-container');
+        const templateElement = document.getElementById('page-position-template');
+        const templateId = $('#template-id').val();
+        
+        // Add page position button click
+        $('#add-page-position-btn').click(function() {
+            // Check if we need to remove the placeholder
+            if (container.find('.page-position-item').length === 0) {
+                container.empty();
+            }
+            
+            // Clone the template
+            const clone = document.importNode(templateElement.content, true);
+            container.append(clone);
+            
+            // Initialize event handlers for the new item
+            initPagePositionHandlers(container.find('.page-position-item:last-child'));
+        });
+        
+        // Initialize existing page positions
+        function initPagePositionHandlers(item) {
+            // Handle remove button
+            item.find('.remove-page-position-btn').click(function() {
+                const positionItem = $(this).closest('.page-position-item');
+                const positionId = positionItem.data('id');
+                
+                if (positionId && positionId !== 'new') {
+                    // Delete via API if it's an existing position
+                    $.ajax({
+                        url: `/templates/${templateId}/page-positions/${positionId}/`,
+                        type: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val()
+                        },
+                        success: function(response) {
+                            positionItem.remove();
+                            
+                            // If no items left, show placeholder
+                            if (container.find('.page-position-item').length === 0) {
+                                container.html('<div class="p-4 text-center text-gray-500">No page positions defined yet. Click "Add Position" to add one.</div>');
+                            }
+                            
+                            // Show success message
+                            showMessage('Position deleted successfully', 'success');
+                        },
+                        error: function(xhr, status, error) {
+                            let errorMsg = error;
+                            try {
+                                if (xhr.responseJSON && xhr.responseJSON.error) {
+                                    errorMsg = xhr.responseJSON.error;
+                                }
+                            } catch (e) {
+                                // If JSON parsing fails, use original error
+                            }
+                            showMessage('Error deleting position: ' + errorMsg, 'error');
+                        }
+                    });
+                } else {
+                    // Just remove from DOM if it's a new unsaved position
+                    positionItem.remove();
+                    
+                    // If no items left, show placeholder
+                    if (container.find('.page-position-item').length === 0) {
+                        container.html('<div class="p-4 text-center text-gray-500">No page positions defined yet. Click "Add Position" to add one.</div>');
+                    }
+                }
+            });
+            
+            // Handle save button click
+            item.find('.save-page-position-btn').click(function() {
+                const positionItem = $(this).closest('.page-position-item');
+                const positionId = positionItem.data('id');
+                const positionValue = positionItem.find('select[name="position[]"]').val();
+                const deltaValue = positionItem.find('input[name="delta[]"]').val();
+                let pageNumber = null;
+                
+                if (positionValue === 'custom') {
+                    pageNumber = positionItem.find('input[name="page_number[]"]').val();
+                    if (!pageNumber) {
+                        showMessage('Please enter a page number for custom position', 'error');
+                        return;
+                    }
+                }
+                
+                const data = {
+                    position: positionValue,
+                    delta: deltaValue,
+                    page_number: pageNumber
+                };
+                
+                let url = '';
+                if (positionId === 'new') {
+                    url = `/templates/${templateId}/page-positions/new/`;
+                } else {
+                    url = `/templates/${templateId}/page-positions/${positionId}/`;
+                }
+                
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    headers: {
+                        'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val(),
+                        'Content-Type': 'application/json'
+                    },
+                    data: JSON.stringify(data),
+                    success: function(response) {
+                        // Update the data-id attribute if this was a new position
+                        if (positionId === 'new') {
+                            positionItem.attr('data-id', response.id);
+                        }
+                        
+                        // Show success message
+                        showMessage('Position saved successfully', 'success');
+                    },
+                    error: function(xhr, status, error) {
+                        let errorMsg = error;
+                        try {
+                            if (xhr.responseJSON && xhr.responseJSON.error) {
+                                errorMsg = xhr.responseJSON.error;
+                            }
+                        } catch (e) {
+                            // If JSON parsing fails, use original error
+                        }
+                        showMessage('Error saving position: ' + errorMsg, 'error');
+                    }
+                });
+            });
+            
+            // Handle position select change
+            item.find('.position-select').change(function() {
+                const pageNumberField = $(this).closest('.page-position-item').find('.page-number-field');
+                if ($(this).val() === 'custom') {
+                    pageNumberField.removeClass('hidden');
+                } else {
+                    pageNumberField.addClass('hidden');
+                }
+            });
+        }
+        
+        // Initialize existing page positions
+        container.find('.page-position-item').each(function() {
+            initPagePositionHandlers($(this));
+        });
+        
+        // Helper function to show messages
+        function showMessage(message, type) {
+            const alertClass = type === 'success' ? 'bg-green-50 text-green-800 border-green-400' : 'bg-red-50 text-red-800 border-red-400';
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+            
+            const alertElement = $(
+                '<div class="rounded-md p-4 mb-4 ' + alertClass + ' border">' +
+                    '<div class="flex">' +
+                        '<div class="flex-shrink-0">' +
+                            '<i class="fas ' + icon + '"></i>' +
+                        '</div>' +
+                        '<div class="ml-3">' +
+                            '<p>' + message + '</p>' +
+                        '</div>' +
+                        '<div class="ml-auto pl-3">' +
+                            '<div class="-mx-1.5 -my-1.5">' +
+                                '<button type="button" class="close-alert inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">' +
+                                    '<i class="fas fa-times"></i>' +
+                                '</button>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>'
+            );
+            
+            // Insert before the page positions container
+            alertElement.insertBefore(container);
+            
+            // Add close button functionality
+            alertElement.find('.close-alert').click(function() {
+                alertElement.remove();
+            });
+            
+            // Auto-remove after 5 seconds
+            setTimeout(function() {
+                alertElement.fadeOut(500, function() {
+                    $(this).remove();
+                });
+            }, 5000);
+        }
+        
+        // Form submission handling - keep this but don't collect positions as they're saved via API now
+        $('#template-form').submit(function() {
+            // No need to collect positions on form submit as they are saved separately via API
+            return true;
+        });
     });
 </script>
 {% endblock %} 

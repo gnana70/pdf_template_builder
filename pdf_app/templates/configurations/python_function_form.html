@@ -4,8 +4,8 @@
 {% block title %}{% if form.instance.id %}Edit Python Function{% else %}Create Python Function{% endif %} | PDF Template Builder{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/theme/monokai.min.css">
+<link rel="stylesheet" href="{% static 'js/codemirror/codemirror.min.css' %}">
+<link rel="stylesheet" href="{% static 'js/codemirror/theme/monokai.min.css' %}">
 <style>
     .CodeMirror {
         height: 400px;
@@ -25,6 +25,10 @@
         margin-top: 0.5rem;
     }
 </style>
+<!-- Preload critical CodeMirror scripts for better performance -->
+<link rel="preload" href="{% static 'js/codemirror/codemirror.min.js' %}" as="script">
+<link rel="preload" href="{% static 'js/codemirror/mode/python/python.min.js' %}" as="script">
+<link rel="preload" href="{% static 'js/codemirror/theme/monokai.min.css' %}" as="style">
 {% endblock %}
 
 {% block content %}
@@ -173,202 +177,33 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/mode/python/python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/edit/matchbrackets.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/edit/closebrackets.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/comment/comment.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/indent/indent.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/addon/lint/lint.min.js"></script>
+<!-- Load CodeMirror scripts -->
+<script src="{% static 'js/codemirror/codemirror.min.js' %}"></script>
+<script src="{% static 'js/codemirror/mode/python/python.min.js' %}"></script>
+<script src="{% static 'js/codemirror/addon/edit/matchbrackets.min.js' %}"></script>
+<script src="{% static 'js/codemirror/addon/edit/closebrackets.min.js' %}"></script>
+<script src="{% static 'js/codemirror/addon/comment/comment.min.js' %}"></script>
+<script src="{% static 'js/codemirror/addon/selection/active-line.min.js' %}"></script>
+<script src="{% static 'js/codemirror/addon/lint/lint.min.js' %}"></script>
+<script src="{% static 'js/codemirror/python-editor.js' %}"></script>
+
+<!-- Use a separate script tag with type="text/template" for template rendering -->
+<script id="editor-config" type="text/template">
+{
+    "executeUrl": "{% if form.instance.id %}{% url 'python_function_execute' form.instance.id %}{% else %}{% url 'execute_raw_python_code' %}{% endif %}",
+    "isExistingFunction": {% if form.instance.id %}true{% else %}false{% endif %}
+}
+</script>
+
+<!-- Clean JavaScript with no Django template tags -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize CodeMirror for Python code
-        const codeEditor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
-            mode: 'python',
-            theme: 'monokai',
-            lineNumbers: true,
-            indentUnit: 4,
-            smartIndent: true,
-            indentWithTabs: false,
-            matchBrackets: true,
-            autoCloseBrackets: true,
-            extraKeys: {
-                "Tab": function(cm) {
-                    if (cm.somethingSelected()) {
-                        cm.indentSelection("add");
-                    } else {
-                        cm.replaceSelection("    ", "end");
-                    }
-                },
-                "Shift-Tab": function(cm) {
-                    cm.indentSelection("subtract");
-                },
-                "Ctrl-/": "toggleComment"
-            }
-        });
-
-        // Initialize CodeMirror for function parameters
-        const argsEditor = CodeMirror.fromTextArea(document.getElementById('function-args'), {
-            mode: 'python',
-            theme: 'monokai',
-            lineNumbers: true,
-            indentUnit: 4,
-            smartIndent: true,
-            indentWithTabs: false,
-            matchBrackets: true,
-            autoCloseBrackets: true,
-            extraKeys: {
-                "Tab": function(cm) {
-                    if (cm.somethingSelected()) {
-                        cm.indentSelection("add");
-                    } else {
-                        cm.replaceSelection("    ", "end");
-                    }
-                },
-                "Shift-Tab": function(cm) {
-                    cm.indentSelection("subtract");
-                },
-                "Ctrl-/": "toggleComment"
-            }
-        });
-
-        // Execute button handler
-        const executeButton = document.getElementById('execute-button');
-        const resultsOutput = document.getElementById('results-output');
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-        executeButton.addEventListener('click', function() {
-            // Get current code and args
-            const code = codeEditor.getValue();
-            const argsCode = argsEditor.getValue();
-
-            // Show loading state
-            executeButton.disabled = true;
-            executeButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Executing...';
-            resultsOutput.innerHTML = '<div class="text-gray-400">Executing function...</div>';
-
-            {% if form.instance.id %}
-            // For existing function, we can execute directly
-            fetch('{% url 'python_function_execute' form.instance.id %}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: `args_code=${encodeURIComponent(argsCode)}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    let output = data.output || '';
-                    let result = data.result || '';
-                    
-                    resultsOutput.innerHTML = 
-                        '<div class="mb-2">' +
-                        '<h5 class="text-sm font-medium">Function output:</h5>' +
-                        '<pre class="bg-gray-100 p-2 rounded">' + output + '</pre>' +
-                        '</div>' +
-                        '<div>' +
-                        '<h5 class="text-sm font-medium">Return value:</h5>' +
-                        '<pre class="bg-gray-100 p-2 rounded">' + result + '</pre>' +
-                        '</div>';
-                } else {
-                    resultsOutput.innerHTML = 
-                        '<div class="error-message">' +
-                        '<h5 class="font-medium">Error:</h5>' +
-                        '<pre>' + data.error + '</pre>' +
-                        (data.traceback ? '<details><summary>Traceback</summary><pre>' + data.traceback + '</pre></details>' : '') +
-                        '</div>';
-                }
-            })
-            .catch(error => {
-                resultsOutput.innerHTML = '<div class="error-message">Failed to execute: ' + error.message + '</div>';
-            })
-            .finally(() => {
-                executeButton.disabled = false;
-                executeButton.innerHTML = '<i class="fas fa-play mr-2"></i> Execute Function';
-            });
-            {% else %}
-            // For new function, we'll use the raw code execution endpoint
-            fetch('{% url 'execute_raw_python_code' %}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    code: code,
-                    args_code: argsCode
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    let output = data.output || '';
-                    let result = data.result || '';
-                    
-                    resultsOutput.innerHTML = 
-                        '<div class="mb-2">' +
-                        '<h5 class="text-sm font-medium">Function output:</h5>' +
-                        '<pre class="bg-gray-100 p-2 rounded">' + output + '</pre>' +
-                        '</div>' +
-                        '<div>' +
-                        '<h5 class="text-sm font-medium">Return value:</h5>' +
-                        '<pre class="bg-gray-100 p-2 rounded">' + result + '</pre>' +
-                        '</div>';
-                } else {
-                    resultsOutput.innerHTML = 
-                        '<div class="error-message">' +
-                        '<h5 class="font-medium">Error:</h5>' +
-                        '<pre>' + data.error + '</pre>' +
-                        (data.traceback ? '<details><summary>Traceback</summary><pre>' + data.traceback + '</pre></details>' : '') +
-                        '</div>';
-                }
-            })
-            .catch(error => {
-                resultsOutput.innerHTML = '<div class="error-message">Failed to execute: ' + error.message + '</div>';
-            })
-            .finally(() => {
-                executeButton.disabled = false;
-                executeButton.innerHTML = '<i class="fas fa-play mr-2"></i> Execute Function';
-            });
-            {% endif %}
-        });
-
-        // Basic linting
-        function lintCode() {
-            // This is a simplified linting, Python server-side validation will be more thorough
-            const code = codeEditor.getValue();
-            const lintErrors = document.getElementById('lintErrors');
-            const lintErrorsList = document.getElementById('lintErrorsList');
-            const errors = [];
-
-            // Simple checks
-            if (code.includes('import os') || code.includes('import sys')) {
-                errors.push('Security warning: Importing system modules is restricted');
-            }
-
-            // Update UI
-            if (errors.length > 0) {
-                lintErrorsList.innerHTML = '';
-                errors.forEach(error => {
-                    const li = document.createElement('li');
-                    li.textContent = error;
-                    lintErrorsList.appendChild(li);
-                });
-                lintErrors.classList.remove('hidden');
-            } else {
-                lintErrors.classList.add('hidden');
-            }
-        }
-
-        // Add event listener for linting
-        codeEditor.on('change', function() {
-            lintCode();
-        });
-
-        // Run initial lint
-        lintCode();
+        // Get configuration from the template-rendered JSON
+        var configElement = document.getElementById('editor-config');
+        var config = JSON.parse(configElement.textContent);
+        
+        // Initialize editors with the configuration
+        var editors = initPythonEditor(config.executeUrl, config.isExistingFunction);
     });
 </script>
 {% endblock %} 

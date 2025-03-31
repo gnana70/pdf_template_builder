@@ -4,6 +4,7 @@ URL configuration for pdf_app application.
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from rest_framework.routers import DefaultRouter
+from django.views.generic import TemplateView
 
 from pdf_app.views import auth_views as custom_auth_views
 from pdf_app.views import template_views, field_views, table_views, configuration_views
@@ -17,7 +18,8 @@ from pdf_app.views.template_views import (
     template_configure, template_field_create, template_field_update, 
     template_field_delete, extract_text_from_area, get_pdf_file, get_configuration_data,
     template_dimensions, template_field_api, extract_tables_api, extract_pdf_images,
-    save_template_image, get_template_images, delete_template_image
+    save_template_image, get_template_images, delete_template_image, template_update_status,
+    template_page_position_api
 )
 
 # Create a router for our API viewsets
@@ -78,10 +80,14 @@ urlpatterns = [
     path('templates/<int:pk>/update/', template_update, name='template_update'),
     path('templates/<int:pk>/delete/', template_delete, name='template_delete'),
     path('templates/<int:pk>/configure/', template_configure, name='template_configure'),
-    path('templates/<int:template_pk>/fields/create/', template_field_create, name='template_field_create'),
+    path('templates/<int:pk>/update-status/', template_update_status, name='template_update_status'),
     path('templates/fields/<int:pk>/update/', template_field_update, name='template_field_update'),
     path('templates/fields/<int:pk>/delete/', template_field_delete, name='template_field_delete'),
     path('templates/<int:template_pk>/fields/<int:pk>/', template_field_api, name='template_field_api'),
+    path('templates/<int:template_pk>/page-positions/new/', template_page_position_api, name='template_page_position_create'),
+    path('templates/<int:template_pk>/page-positions/<str:position_id>/', template_page_position_api, name='template_page_position_api'),
+    path('templates/<int:template_pk>/fields/create/', template_field_create, name='template_field_create'),
+    path('templates/test-api/', TemplateView.as_view(template_name='templates/test_api.html'), name='template_test_api'),
     path('templates/<int:template_pk>/extract-text/', extract_text_from_area, name='extract_text_from_area'),
     path('templates/<int:template_pk>/pdf/', get_pdf_file, name='get_template_pdf'),
     path('templates/<int:template_pk>/get-configuration-data/', get_configuration_data, name='get_configuration_data'),

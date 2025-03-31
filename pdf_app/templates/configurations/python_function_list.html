@@ -3,212 +3,325 @@
 
 {% block title %}{% if select_mode %}Select Python Function{% else %}Python Functions{% endif %} | PDF Template Builder{% endblock %}
 
+{% block extra_css %}
+<style>
+    .card-actions {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .action-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.375rem;
+        transition: all 150ms ease-in-out;
+    }
+    
+    .action-button:hover {
+        transform: translateY(-1px);
+    }
+    
+    .function-card {
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .function-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .gradient-border {
+        position: relative;
+    }
+    
+    .gradient-border::before {
+        content: "";
+        position: absolute;
+        inset: -0.5px;
+        border-radius: 0.5rem;
+        background: linear-gradient(to right, #3b82f6, #16a34a);
+        z-index: 0;
+        opacity: 0.25;
+        transition: opacity 0.3s ease;
+    }
+    
+    .gradient-border:hover::before {
+        opacity: 1;
+    }
+    
+    .gradient-border > * {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .description-cell {
+        position: relative;
+    }
+    
+    .description-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 200px;
+        display: inline-block;
+    }
+    
+    .description-tooltip {
+        visibility: hidden;
+        position: absolute;
+        z-index: 100;
+        background-color: #333;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        width: 300px;
+        top: 100%;
+        left: 0;
+        opacity: 0;
+        transition: opacity 0.3s;
+        white-space: normal;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        pointer-events: none;
+    }
+    
+    .description-cell:hover .description-tooltip {
+        visibility: visible;
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">{% if select_mode %}Select Python Function{% else %}Python Functions{% endif %}</h1>
-            <p class="mt-1 max-w-2xl text-sm text-gray-500">
-                {% if select_mode %}Select a Python function to use with your column{% else %}Create and manage Python functions for data processing{% endif %}
-            </p>
-        </div>
-        {% if not select_mode %}
-        <a href="{% url 'python_function_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            <i class="fas fa-plus mr-2"></i> New Function
-        </a>
-        {% else %}
-        <a href="{{ return_url }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            <i class="fas fa-arrow-left mr-2"></i> Back
-        </a>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Search and filters -->
-<div class="bg-white shadow-sm rounded-lg p-4 mb-6">
-    <form method="get" action="{% url 'python_function_list' %}" class="md:flex md:items-center">
-        <div class="flex-1 min-w-0">
-            <div class="relative rounded-md">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400"></i>
-                </div>
-                <input type="text" name="search" id="search" value="{{ search_query }}" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md" placeholder="Search functions">
-            </div>
-        </div>
-        <div class="mt-4 md:mt-0 md:ml-4">
-            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-filter mr-2"></i> Filter
-            </button>
-            <a href="{% url 'python_function_list' %}" class="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-times mr-2"></i> Clear
-            </a>
-        </div>
-    </form>
-</div>
-
-<div class="border-t border-gray-200">
-    {% if python_functions %}
-    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Name
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Description
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Created By
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Created
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Last Updated
-                        </th>
-                        <th scope="col" class="relative px-6 py-3">
-                            <span class="sr-only">Actions</span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for python_function in python_functions %}
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="ml-0">
-                                    <div class="text-sm font-medium text-gray-900">
-                                        <a href="{% if not select_mode %}{% url 'python_function_detail' python_function.id %}{% else %}javascript:void(0){% endif %}" class="text-indigo-600 hover:text-indigo-900">
-                                            {{ python_function.name }}
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-500 truncate max-w-xs">
-                                {{ python_function.description|default:"No description" }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-500">
-                                {{ python_function.created_by.username|default:"Unknown" }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-500">
-                                {{ python_function.created_at|date:"M j, Y" }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-500">
-                                {{ python_function.updated_at|date:"M j, Y" }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            {% if select_mode %}
-                            <button 
-                                onclick="selectFunction('{{ python_function.id }}', '{{ python_function.name }}')" 
-                                class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                Select
-                            </button>
-                            {% else %}
-                            <a href="{% url 'python_function_detail' python_function.id %}" class="text-indigo-600 hover:text-indigo-900 mr-4" title="View function details">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="{% url 'python_function_update' python_function.id %}" class="text-blue-600 hover:text-blue-900 mr-4" title="Edit function">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <a href="{% url 'python_function_delete' python_function.id %}" class="text-red-600 hover:text-red-900" title="Delete function">
-                                <i class="fas fa-trash"></i>
-                            </a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% else %}
-    <div class="bg-white shadow-md rounded-lg p-6 text-center">
-        <div class="text-gray-400 mb-4">
-            <i class="fas fa-code text-6xl"></i>
-        </div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No Python functions found</h3>
-        <p class="text-gray-500 mb-4">{% if search_query %}No functions match your search. <a href="{% url 'python_function_list' %}" class="text-indigo-600 hover:text-indigo-900">Clear filters</a>{% else %}Get started by creating a new Python function.{% endif %}</p>
-        {% if not search_query %}
-        <div class="mt-6">
-            <a href="{% url 'python_function_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i class="fas fa-plus mr-2"></i> New Function
-            </a>
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
-</div>
-
-<!-- Pagination controls -->
-{% if is_paginated %}
-<div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-4 rounded-lg">
-    <div class="flex-1 flex justify-between sm:hidden">
-        {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-            Previous
-        </a>
-        {% endif %}
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-            Next
-        </a>
-        {% endif %}
-    </div>
-    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-        <div>
-            <p class="text-sm text-gray-700">
-                Showing
-                <span class="font-medium">{{ page_obj.start_index }}</span>
-                to
-                <span class="font-medium">{{ page_obj.end_index }}</span>
-                of
-                <span class="font-medium">{{ paginator.count }}</span>
-                results
-            </p>
-        </div>
-        <div>
-            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                    <span class="sr-only">Previous</span>
-                    <i class="fas fa-chevron-left h-5 w-5"></i>
-                </a>
-                {% endif %}
-                
-                {% for i in paginator.page_range %}
-                    {% if page_obj.number == i %}
-                    <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-indigo-50 text-sm font-medium text-indigo-600">
-                        {{ i }}
-                    </span>
-                    {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
-                    <a href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        {{ i }}
+<div class="py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="relative group mb-8">
+            <div class="absolute -inset-0.5 bg-gradient-to-r from-green-600 to-teal-600 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-200"></div>
+            <div class="relative bg-white shadow-lg rounded-lg p-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">{% if select_mode %}Select Python Function{% else %}Python Functions{% endif %}</h1>
+                        <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                            {% if select_mode %}Select a Python function to use with your column{% else %}Create and manage Python functions for data processing{% endif %}
+                        </p>
+                    </div>
+                    {% if not select_mode %}
+                    <a href="{% url 'python_function_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        <i class="fas fa-plus mr-2"></i> New Function
+                    </a>
+                    {% else %}
+                    <a href="{{ return_url }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-arrow-left mr-2"></i> Back
                     </a>
                     {% endif %}
-                {% endfor %}
-                
-                {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                    <span class="sr-only">Next</span>
-                    <i class="fas fa-chevron-right h-5 w-5"></i>
-                </a>
-                {% endif %}
-            </nav>
+                </div>
+            </div>
         </div>
+
+        <!-- Search and filters -->
+        <div class="gradient-border mb-6">
+            <div class="bg-white shadow-sm rounded-lg p-4">
+                <form method="get" action="{% url 'python_function_list' %}" class="md:flex md:items-center">
+                    <div class="flex-1 min-w-0">
+                        <div class="relative rounded-md">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                            <input type="text" name="search" id="search" value="{{ search_query }}" class="focus:ring-green-500 focus:border-green-500 block w-full pl-10 py-2 border-gray-300 rounded-md" placeholder="Search functions">
+                        </div>
+                    </div>
+                    <div class="mt-4 md:mt-0 md:ml-4">
+                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <i class="fas fa-filter mr-2"></i> Filter
+                        </button>
+                        <a href="{% url 'python_function_list' %}" class="ml-3 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-times mr-2"></i> Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="border-t border-gray-200">
+            {% if python_functions %}
+            <div class="function-card gradient-border mb-6">
+                <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-green-100">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
+                                        Name
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
+                                        Description
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
+                                        Created By
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
+                                        Created On
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
+                                        Last Updated
+                                    </th>
+                                    <th scope="col" class="relative px-6 py-3">
+                                        <span class="sr-only">Actions</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for python_function in python_functions %}
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="ml-0">
+                                                <div class="text-sm font-medium text-gray-900">
+                                                    <a href="{% if not select_mode %}{% url 'python_function_detail' python_function.id %}{% else %}javascript:void(0){% endif %}" class="text-green-600 hover:text-green-900">
+                                                        {{ python_function.name }}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm text-gray-500 description-cell">
+                                            <span class="description-text">{{ python_function.description|default:"No description" }}</span>
+                                            {% if python_function.description %}
+                                            <div class="description-tooltip">{{ python_function.description }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-500">
+                                            {{ python_function.created_by.username|default:"Unknown" }}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-500">
+                                            {{ python_function.created_at|date:"M j, Y" }}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-500">
+                                            {{ python_function.updated_at|date:"M j, Y" }}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        {% if select_mode %}
+                                        <button 
+                                            onclick="selectFunction('{{ python_function.id }}', '{{ python_function.name }}')" 
+                                            class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                            Select
+                                        </button>
+                                        {% else %}
+                                        <a href="{% url 'python_function_detail' python_function.id %}" class="text-green-600 hover:text-green-900 mr-4" title="View function details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'python_function_update' python_function.id %}" class="text-blue-600 hover:text-blue-900 mr-4" title="Edit function">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'python_function_delete' python_function.id %}" class="text-red-600 hover:text-red-900" title="Delete function">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="relative group mb-6">
+                <div class="absolute -inset-0.5 bg-gradient-to-r from-green-600 to-teal-600 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-200"></div>
+                <div class="relative bg-white shadow-md rounded-lg p-6 text-center">
+                    <div class="text-gray-400 mb-4">
+                        <i class="fas fa-code text-6xl"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No Python functions found</h3>
+                    <p class="text-gray-500 mb-4">{% if search_query %}No functions match your search. <a href="{% url 'python_function_list' %}" class="text-green-600 hover:text-green-900">Clear filters</a>{% else %}Get started by creating a new Python function.{% endif %}</p>
+                    {% if not search_query %}
+                    <div class="mt-6">
+                        <a href="{% url 'python_function_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <i class="fas fa-plus mr-2"></i> New Function
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Pagination controls -->
+        {% if is_paginated %}
+        <div class="gradient-border mt-4">
+            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Previous
+                    </a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Next
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing
+                            <span class="font-medium">{{ page_obj.start_index }}</span>
+                            to
+                            <span class="font-medium">{{ page_obj.end_index }}</span>
+                            of
+                            <span class="font-medium">{{ paginator.count }}</span>
+                            results
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">Previous</span>
+                                <i class="fas fa-chevron-left h-5 w-5"></i>
+                            </a>
+                            {% endif %}
+                            
+                            {% for i in paginator.page_range %}
+                                {% if page_obj.number == i %}
+                                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-green-50 text-sm font-medium text-green-600">
+                                    {{ i }}
+                                </span>
+                                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                                <a href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    {{ i }}
+                                </a>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">Next</span>
+                                <i class="fas fa-chevron-right h-5 w-5"></i>
+                            </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
-{% endif %}
 
 {% if select_mode %}
 <script>
@@ -283,6 +396,16 @@
         if (searchInput.value) {
             searchInput.select();
         }
+        
+        // Live search implementation
+        let debounceTimer;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function() {
+                const form = searchInput.closest('form');
+                form.submit();
+            }, 500); // 500ms debounce time
+        });
     });
 </script>
 {% endblock %}

@@ -5,7 +5,120 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf_viewer.min.css">
-<link rel="stylesheet" href="{% static 'css/configure_template.css' %}">
+<link rel="stylesheet" href="{% static 'css/configure_template.css' %}?v={% now 'U' %}">
+<style>
+    /* Direct styling for the fields section */
+    .fields-section .bg-gray-100 {
+        background: transparent !important;
+        color: #1f2937 !important;
+        border-bottom: 1px solid #e5e7eb !important;
+    }
+    
+    .fields-section h2 {
+        color: #1f2937 !important;
+        font-weight: 600 !important;
+    }
+    
+    .fields-section p {
+        color: #6B7280 !important;
+    }
+    
+    #add-field-btn, button[id="add-field-btn"] {
+        background-color: #10b981 !important;
+        transition: all 0.2s ease;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        border-radius: 0.375rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    #add-field-btn:hover, button[id="add-field-btn"]:hover {
+        background-color: #059669 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    /* Field item styling */
+    .field-item {
+        background-color: white;
+        border-left: 4px solid #6366f1;
+        margin-bottom: 10px;
+        border-radius: 0.375rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+        transition: all 0.2s ease;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .field-item:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transform: translateY(-2px);
+    }
+    
+    /* Different colors for different field types */
+    .field-item.text-type {
+        border-left-color: #6366f1; /* Indigo */
+    }
+    
+    .field-item.number-type {
+        border-left-color: #3b82f6; /* Blue */
+    }
+    
+    .field-item.date-type {
+        border-left-color: #10b981; /* Green */
+    }
+    
+    .field-item.checkbox-type {
+        border-left-color: #f59e0b; /* Amber */
+    }
+    
+    .field-item.selection-type {
+        border-left-color: #8b5cf6; /* Purple */
+    }
+    
+    /* Field coordinates badge */
+    .field-coordinates {
+        display: inline-block;
+        background-color: #e5e7eb;
+        color: #4b5563;
+        padding: 2px 6px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        margin-right: 4px;
+    }
+    
+    /* Field page badge */
+    .field-page {
+        display: inline-block;
+        background-color: #dbeafe;
+        color: #1e40af;
+        padding: 2px 6px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+    }
+    
+    /* Field extracted text */
+    .field-text {
+        background-color: #f3f4f6;
+        border-left: 3px solid #d1d5db;
+        padding: 8px;
+        margin-top: 4px;
+        border-radius: 0.25rem;
+        font-family: monospace;
+        color: #374151;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -77,14 +190,14 @@
     
     <!-- Fields Section (40%) -->
     <div class="fields-section">
-        <div class="bg-gray-100 p-3 border-b">
+        <div class="bg-gray-100 p-3 border-b" style="background: transparent !important; color: #1f2937 !important; border-bottom: 1px solid #e5e7eb !important;">
             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-medium text-gray-900">Template Fields</h2>
-                <button id="add-field-btn" class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <h2 class="text-lg font-medium text-gray-900" style="color: #1f2937 !important; font-weight: 600 !important;">Template Fields</h2>
+                <button id="add-field-btn" class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" style="background-color: #68d391 !important;">
                     <i class="fas fa-plus mr-1"></i> Add Field
                 </button>
             </div>
-            <p class="mt-1 text-sm text-gray-500">Configure fields for data extraction</p>
+            <p class="mt-1 text-sm text-gray-500" style="color: #6B7280 !important;">Configure fields for data extraction</p>
         </div>
         
         <!-- Inline Field Form - Initially Hidden -->
@@ -426,45 +539,28 @@
         <div id="fields-list" class="divide-y divide-gray-200">
             {% if fields %}
                 {% for field in fields %}
-                    <div class="field-item p-4 hover:bg-gray-50" data-field-id="{{ field.id }}">
+                    <div class="field-item p-4 {% if field.field_type %}{{ field.field_type }}-type{% else %}text-type{% endif %}" data-field-id="{{ field.id }}">
                         <div class="flex justify-between">
                             <h3 class="text-md font-medium text-gray-900">{{ field.name }}</h3>
                             <div class="flex space-x-2">
-                                <button class="edit-field-btn text-blue-600 hover:text-blue-800" data-field-id="{{ field.id }}">
+                                <button class="edit-field-btn btn-edit" data-field-id="{{ field.id }}">
                                     <i class="fas fa-edit"></i>
-                </button>
-                                <button class="delete-field-btn text-red-600 hover:text-red-800" data-field-id="{{ field.id }}">
+                                </button>
+                                <button class="delete-field-btn btn-delete" data-field-id="{{ field.id }}">
                                     <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        </div>
-                        {% if field.custom_name %}
-                        <p class="text-sm text-gray-500">Custom Name: {{ field.custom_name }}</p>
-                        {% endif %}
-                        <div class="mt-2 text-sm text-gray-600">
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <span class="text-gray-500">Page:</span> {{ field.page }}
-                                </div>
-                                <div>
-                                    <span class="text-gray-500">Position:</span> ({{ field.x|floatformat:2 }}, {{ field.y|floatformat:2 }})
-                                </div>
-                                <div class="col-span-2">
-                                    <span class="text-gray-500">Size:</span> {{ field.x1|floatformat:2 }} x {{ field.y1|floatformat:2 }}
-                                </div>
-                                {% if field.extracted_text %}
-                                <div class="col-span-2 mt-1">
-                                    <span class="text-gray-500">Extracted Text:</span> 
-                                    <span class="bg-gray-100 px-1 py-0.5 rounded text-gray-800">{{ field.extracted_text }}</span>
-                                </div>
-                                {% endif %}
-                                {% if field.python_function %}
-                                <div class="col-span-2 mt-1">
-                                    <span class="text-gray-500">Python Function:</span> 
-                                    <span class="bg-indigo-100 text-indigo-800 px-1 py-0.5 rounded">{{ field.python_function.name }}</span>
-                                </div>
-                                {% endif %}
+                                </button>
                             </div>
+                        </div>
+                        <div class="mt-1 text-sm text-gray-600 flex flex-wrap items-center gap-2">
+                            <span class="field-page">Page {{ field.page }}</span>
+                            <span class="field-coordinates">Pos: ({{ field.x|floatformat:0 }},{{ field.y|floatformat:0 }})</span>
+                            <span class="field-coordinates">Size: {{ field.x1|floatformat:0 }}×{{ field.y1|floatformat:0 }}</span>
+                            {% if field.ocr_required %}
+                            <span class="bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded text-xs">OCR</span>
+                            {% endif %}
+                            {% if field.custom_name %}
+                            <span class="text-gray-500 text-xs">(Custom: {{ field.custom_name }})</span>
+                            {% endif %}
                         </div>
                     </div>
                 {% endfor %}
@@ -487,4 +583,108 @@
 <script src="{% static 'js/configure_template.js' %}"></script>
 <script src="{% static 'js/configure_template_fields.js' %}"></script>
 <script src="{% static 'js/configure_template_tables.js' %}"></script>
+<script>
+    // Add hover effects for the add field button
+    document.addEventListener('DOMContentLoaded', function() {
+        const addFieldBtn = document.getElementById('add-field-btn');
+        if (addFieldBtn) {
+            // Set initial styles
+            addFieldBtn.style.setProperty('background-color', '#68d391', 'important');
+            
+            addFieldBtn.addEventListener('mouseover', function() {
+                this.style.setProperty('background-color', '#48bb78', 'important');
+                this.style.transform = 'translateY(-1px)';
+                this.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            });
+            
+            addFieldBtn.addEventListener('mouseout', function() {
+                this.style.setProperty('background-color', '#68d391', 'important');
+                this.style.transform = '';
+                this.style.boxShadow = '';
+            });
+        }
+        
+        // Apply header section styling
+        const headerSection = document.querySelector('.fields-section .bg-gray-100');
+        if (headerSection) {
+            headerSection.style.setProperty('background', 'transparent', 'important');
+            headerSection.style.setProperty('color', '#1f2937', 'important');
+            headerSection.style.setProperty('border-bottom', '1px solid #e5e7eb', 'important');
+            
+            // Style the header text
+            const headerTitle = headerSection.querySelector('h2');
+            if (headerTitle) {
+                headerTitle.style.setProperty('color', '#1f2937', 'important');
+                headerTitle.style.setProperty('font-weight', '600', 'important');
+            }
+            
+            // Style the subtitle
+            const headerSubtitle = headerSection.querySelector('p');
+            if (headerSubtitle) {
+                headerSubtitle.style.setProperty('color', '#6B7280', 'important');
+            }
+        }
+        
+        // Apply field item styling for any already present fields
+        document.querySelectorAll('.field-item').forEach(function(item) {
+            item.style.backgroundColor = 'white';
+            item.style.borderLeftWidth = '4px';
+            item.style.borderLeftStyle = 'solid';
+            item.style.borderLeftColor = '#7f9cf5';
+            item.style.marginBottom = '10px';
+            item.style.borderRadius = '0.375rem';
+            item.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+            item.style.overflow = 'hidden';
+            item.style.transition = 'all 0.2s ease';
+            item.style.padding = '12px 16px';
+            
+            // Style action buttons
+            const editButton = item.querySelector('.edit-field-btn');
+            if (editButton) {
+                editButton.style.color = '#667eea';
+            }
+            
+            const deleteButton = item.querySelector('.delete-field-btn');
+            if (deleteButton) {
+                deleteButton.style.color = '#f56565';
+            }
+            
+            // Style field page badges
+            const pageSpan = item.querySelector('.field-page');
+            if (pageSpan) {
+                pageSpan.style.display = 'inline-flex';
+                pageSpan.style.alignItems = 'center';
+                pageSpan.style.backgroundColor = '#e6f0fd';
+                pageSpan.style.color = '#2c5282';
+                pageSpan.style.padding = '2px 6px';
+                pageSpan.style.borderRadius = '9999px';
+                pageSpan.style.fontSize = '0.75rem';
+                pageSpan.style.lineHeight = '1rem';
+                pageSpan.style.whiteSpace = 'nowrap';
+            }
+            
+            // Style field coordinates
+            const coordSpans = item.querySelectorAll('.field-coordinates');
+            coordSpans.forEach(function(span) {
+                span.style.display = 'inline-flex';
+                span.style.alignItems = 'center';
+                span.style.backgroundColor = '#edf2f7';
+                span.style.color = '#4a5568';
+                span.style.padding = '2px 6px';
+                span.style.borderRadius = '9999px';
+                span.style.fontSize = '0.75rem';
+                span.style.lineHeight = '1rem';
+                span.style.whiteSpace = 'nowrap';
+            });
+            
+            // Style OCR badge if present
+            const ocrBadge = item.querySelector('.bg-yellow-100');
+            if (ocrBadge) {
+                ocrBadge.style.backgroundColor = '#fef3c7';
+                ocrBadge.style.color = '#92400e';
+                ocrBadge.style.fontWeight = '500';
+            }
+        });
+    });
+</script>
 {% endblock %} 

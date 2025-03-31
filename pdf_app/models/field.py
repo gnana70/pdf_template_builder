@@ -16,6 +16,7 @@ class Field(models.Model):
     DATE = 'date'
     CHECKBOX = 'checkbox'
     SELECTION = 'selection'
+    BOOLEAN = 'boolean'
     
     FIELD_TYPE_CHOICES = [
         (TEXT, _('Text')),
@@ -23,6 +24,7 @@ class Field(models.Model):
         (DATE, _('Date')),
         (CHECKBOX, _('Checkbox')),
         (SELECTION, _('Selection')),
+        (BOOLEAN, _('Boolean')),
     ]
     
     name = models.CharField(_('Name'), max_length=255)
@@ -78,6 +80,7 @@ class Field(models.Model):
         verbose_name = _('Field')
         verbose_name_plural = _('Fields')
         ordering = ['configuration', 'order']
+        unique_together = [('configuration', 'name')]
         
     def __str__(self):
         return f"{self.configuration.name} - {self.name}"

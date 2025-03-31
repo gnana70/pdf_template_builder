@@ -123,6 +123,27 @@ class FieldForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.configuration = kwargs.pop('configuration', None)
         super().__init__(*args, **kwargs)
+        
+    def clean_name(self):
+        name = self.cleaned_data.get('name', '').strip()
+        
+        if not name:
+            raise ValidationError("Field name cannot be empty.")
+        
+        # Check if a field with this name already exists in this configuration
+        if self.configuration:
+            query_filter = {'name__iexact': name, 'configuration': self.configuration}
+            
+            existing_fields = Field.objects.filter(**query_filter)
+            
+            # If we're editing an existing field, exclude it from the check
+            if self.instance and self.instance.pk:
+                existing_fields = existing_fields.exclude(pk=self.instance.pk)
+            
+            if existing_fields.exists():
+                raise ValidationError("A field with this name already exists in this configuration. Please choose a different name.")
+        
+        return name
 
 
 class TableForm(forms.ModelForm):
@@ -161,6 +182,27 @@ class TableForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.configuration = kwargs.pop('configuration', None)
         super().__init__(*args, **kwargs)
+        
+    def clean_name(self):
+        name = self.cleaned_data.get('name', '').strip()
+        
+        if not name:
+            raise ValidationError("Table name cannot be empty.")
+        
+        # Check if a table with this name already exists in this configuration
+        if self.configuration:
+            query_filter = {'name__iexact': name, 'configuration': self.configuration}
+            
+            existing_tables = Table.objects.filter(**query_filter)
+            
+            # If we're editing an existing table, exclude it from the check
+            if self.instance and self.instance.pk:
+                existing_tables = existing_tables.exclude(pk=self.instance.pk)
+            
+            if existing_tables.exists():
+                raise ValidationError("A table with this name already exists in this configuration. Please choose a different name.")
+        
+        return name
 
 
 class TableColumnForm(forms.ModelForm):
@@ -211,6 +253,27 @@ class TableColumnForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.table = kwargs.pop('table', None)
         super().__init__(*args, **kwargs)
+        
+    def clean_name(self):
+        name = self.cleaned_data.get('name', '').strip()
+        
+        if not name:
+            raise ValidationError("Column name cannot be empty.")
+        
+        # Check if a column with this name already exists in this table
+        if self.table:
+            query_filter = {'name__iexact': name, 'table': self.table}
+            
+            existing_columns = TableColumn.objects.filter(**query_filter)
+            
+            # If we're editing an existing column, exclude it from the check
+            if self.instance and self.instance.pk:
+                existing_columns = existing_columns.exclude(pk=self.instance.pk)
+            
+            if existing_columns.exists():
+                raise ValidationError("A column with this name already exists in this table. Please choose a different name.")
+        
+        return name
 
 
 class ConfigurationRunForm(forms.Form):

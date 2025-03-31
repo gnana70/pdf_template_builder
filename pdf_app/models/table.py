@@ -36,6 +36,7 @@ class Table(models.Model):
         verbose_name = _('Table')
         verbose_name_plural = _('Tables')
         ordering = ['configuration', 'page']
+        unique_together = [('configuration', 'name')]
         
     def __str__(self):
         return f"{self.configuration.name} - {self.name}"
@@ -114,6 +115,7 @@ class TableColumn(models.Model):
         verbose_name = _('Table Column')
         verbose_name_plural = _('Table Columns')
         ordering = ['table', 'order']
+        unique_together = [('table', 'name')]
         
     def __str__(self):
         return f"{self.table.name} - {self.name}"  

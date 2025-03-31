@@ -11,7 +11,8 @@ from pdf_app.models import (
     Configuration, 
     ConfigurationRun,
     PythonFunction,
-    TemplateField
+    TemplateField,
+    TemplatePagePosition
 )
 
 
@@ -23,25 +24,43 @@ class DocumentAdmin(admin.ModelAdmin):
     readonly_fields = ('uploaded_at', 'updated_at', 'num_pages', 'file_size')
 
 
+class TemplateFieldInline(admin.TabularInline):
+    model = TemplateField
+    extra = 1
+
+
+class TemplatePagePositionInline(admin.TabularInline):
+    model = TemplatePagePosition
+    extra = 1
+
+
 @admin.register(Template)
 class TemplateAdmin(admin.ModelAdmin):
     list_display = ('name', 'configuration', 'created_by', 'created_at', 'has_watermarks', 'is_multi_account')
     list_filter = ('configuration', 'has_watermarks', 'is_multi_account', 'unnecessary_page_position')
     search_fields = ('name', 'description')
     readonly_fields = ('created_at', 'updated_at')
+    inlines = [TemplateFieldInline, TemplatePagePositionInline]
     fieldsets = (
         (None, {
             'fields': ('name', 'description', 'configuration', 'pdf_file', 'status', 'created_by')
         }),
         ('Template Options', {
-            'fields': ('unnecessary_page_position', 'unnecessary_page_delta', 
-                       'has_watermarks', 'is_multi_account', 'account_text')
+            'fields': ('has_watermarks', 'is_multi_account', 'account_text',
+                       'has_page_numbers')
+        }),
+        ('Special Document Types', {
+            'fields': ('is_dot_matrix', 'is_encoded_text', 'has_invisible_text')
         }),
         ('Page Dimensions', {
             'fields': ('first_page_width', 'first_page_height')
         }),
         ('Additional Settings', {
             'fields': ('is_public', 'version')
+        }),
+        ('Legacy Fields', {
+            'fields': ('unnecessary_page_position', 'unnecessary_page_delta'),
+            'classes': ('collapse',)
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')
@@ -113,13 +132,15 @@ class PythonFunctionAdmin(admin.ModelAdmin):
     )
 
 
-class TemplateFieldInline(admin.TabularInline):
-    model = TemplateField
-    extra = 1
-
-
 @admin.register(TemplateField)
 class TemplateFieldAdmin(admin.ModelAdmin):
     list_display = ('name', 'template', 'custom_name', 'page', 'ocr_required')
     list_filter = ('template', 'page', 'ocr_required')
     search_fields = ('name', 'template__name', 'custom_name')
+
+
+@admin.register(TemplatePagePosition)
+class TemplatePagePositionAdmin(admin.ModelAdmin):
+    list_display = ('template', 'position', 'delta', 'page_number')
+    list_filter = ('template', 'position')
+    search_fields = ('template__name',)

@@ -76,6 +76,12 @@ class Template(models.Model):
     is_multi_account = models.BooleanField(_('Multi Account Statement'), default=False)
     account_text = models.CharField(_('Account Text'), max_length=255, blank=True)
     
+    # Special document types
+    is_dot_matrix = models.BooleanField(_('Dot Matrix File'), default=False)
+    is_encoded_text = models.BooleanField(_('Encoded Text File'), default=False)
+    has_invisible_text = models.BooleanField(_('Contains Invisible Text'), default=False)
+    has_page_numbers = models.BooleanField(_('Page Numbers Available'), default=False)
+    
     # Page dimensions
     first_page_width = models.FloatField(_('First Page Width'), default=0)
     first_page_height = models.FloatField(_('First Page Height'), default=0)
@@ -118,6 +124,29 @@ class Template(models.Model):
         # when field model is created
         
         return new_template
+
+
+class TemplatePagePosition(models.Model):
+    """Model for storing unnecessary page positions and their delta values"""
+    template = models.ForeignKey(Template, on_delete=models.CASCADE, related_name='page_positions', verbose_name=_('Template'))
+    PAGE_CHOICES = [
+        ('first', _('First')),
+        ('last', _('Last')),
+        ('custom', _('Custom')),
+    ]
+    position = models.CharField(_('Page Position'), max_length=10, choices=PAGE_CHOICES)
+    delta = models.IntegerField(_('Delta Value'), default=0)
+    page_number = models.IntegerField(_('Page Number'), blank=True, null=True, help_text=_('Used when position is custom'))
+    
+    class Meta:
+        verbose_name = _('Template Page Position')
+        verbose_name_plural = _('Template Page Positions')
+        ordering = ['template', 'position']
+        
+    def __str__(self):
+        if self.position == 'custom':
+            return f"{self.template.name} - Page {self.page_number} (Delta: {self.delta})"
+        return f"{self.template.name} - {self.position.capitalize()} page (Delta: {self.delta})"
 
 
 class TemplateField(models.Model):
