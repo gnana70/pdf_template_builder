@@ -39,18 +39,27 @@ class TemplateForm(forms.ModelForm):
         }
 
 class TemplateFieldForm(forms.ModelForm):
-    custom_name_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'class': 'form-checkbox'}))
+    """Form for template fields"""
     
     class Meta:
         model = TemplateField
-        fields = ['name', 'custom_name', 'page', 'x', 'y', 'x1', 'y1', 'python_function']
+        fields = [
+            'name', 'custom_name', 'page', 'x', 'y', 'x1', 'y1', 
+            'extracted_text', 'ocr_required', 'python_function',
+            'is_table', 'table_settings', 'table_drawn_cells', 'line_points'
+        ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300 w-full'}),
             'custom_name': forms.TextInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300 w-full'}),
-            'page': forms.NumberInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300', 'min': '1'}),
-            'x': forms.NumberInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300', 'step': '0.01'}),
-            'y': forms.NumberInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300', 'step': '0.01'}),
-            'x1': forms.NumberInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300', 'step': '0.01'}),
-            'y1': forms.NumberInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300', 'step': '0.01'}),
+            'page': forms.NumberInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300 w-full', 'min': '1'}),
+            'x': forms.NumberInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300 w-full', 'step': '0.01'}),
+            'y': forms.NumberInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300 w-full', 'step': '0.01'}),
+            'x1': forms.NumberInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300 w-full', 'step': '0.01'}),
+            'y1': forms.NumberInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300 w-full', 'step': '0.01'}),
+            'extracted_text': forms.TextInput(attrs={'class': 'form-input rounded-md shadow-sm border-gray-300 w-full'}),
             'python_function': forms.Select(attrs={'class': 'form-select rounded-md shadow-sm border-gray-300 w-full'}),
+            'is_table': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'table_settings': forms.HiddenInput(),
+            'table_drawn_cells': forms.HiddenInput(),
+            'line_points': forms.HiddenInput(),
         } 

@@ -126,6 +126,11 @@ class TemplateField(models.Model):
     page = models.IntegerField(default=1)
     extracted_text = models.TextField(blank=True)
     python_function = models.ForeignKey('PythonFunction', on_delete=models.SET_NULL, null=True, blank=True)
+    # New fields for table extraction
+    is_table = models.BooleanField(default=False)
+    table_settings = models.JSONField(null=True, blank=True)
+    table_drawn_cells = models.JSONField(null=True, blank=True)  # For storing drawn table cell coordinates
+    line_points = models.JSONField(null=True, blank=True)  # For storing line points for table extraction
     
     def __str__(self):
         return f"{self.template.name} - {self.name}"

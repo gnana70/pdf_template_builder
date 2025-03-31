@@ -36,6 +36,10 @@ class Template(models.Model):
     # PDF file for template
     pdf_file = models.FileField(_('PDF File'), upload_to='templates/', null=True, blank=True)
     
+    # Unique identifier information
+    unique_identifier_text = models.CharField(_('Unique Identifier Text'), max_length=255, blank=True, null=True)
+    identifier_page = models.IntegerField(_('Identifier Page'), default=1)
+    
     # Template status
     STATUS_CHOICES = [
         ('draft', _('Draft')),
@@ -128,6 +132,11 @@ class TemplateField(models.Model):
     page = models.IntegerField(_('Page'), default=1)
     extracted_text = models.TextField(_('Extracted Text'), blank=True)
     ocr_required = models.BooleanField(_('OCR Required'), default=False)
+    # Table extraction fields
+    is_table = models.BooleanField(_('Is Table'), default=False)
+    table_settings = models.JSONField(_('Table Settings'), null=True, blank=True)
+    table_drawn_cells = models.JSONField(_('Table Drawn Cells'), null=True, blank=True)
+    line_points = models.JSONField(_('Line Points'), null=True, blank=True)
     
     class Meta:
         verbose_name = _('Template Field')
@@ -135,4 +144,26 @@ class TemplateField(models.Model):
         ordering = ['template', 'name']
     
     def __str__(self):
-        return f"{self.template.name} - {self.name}"  
+        return f"{self.template.name} - {self.name}"
+
+
+class TemplateImage(models.Model):
+    """Model for storing PDF template extracted images"""
+    template = models.ForeignKey(Template, on_delete=models.CASCADE, related_name='images', verbose_name=_('Template'))
+    name = models.CharField(_('Image Name'), max_length=255)
+    page = models.IntegerField(_('Page Number'))
+    image_data = models.TextField(_('Image Data'))  # Base64 encoded image
+    width = models.IntegerField(_('Width'), default=0)
+    height = models.IntegerField(_('Height'), default=0)
+    format = models.CharField(_('Format'), max_length=10)
+    is_logo = models.BooleanField(_('Is Logo'), default=False)
+    is_signature = models.BooleanField(_('Is Signature'), default=False)
+    created_at = models.DateTimeField(_('Created At'), auto_now_add=True)
+    
+    class Meta:
+        verbose_name = _('Template Image')
+        verbose_name_plural = _('Template Images')
+        ordering = ['template', 'page', 'name']
+    
+    def __str__(self):
+        return f"{self.template.name} - {self.name} (Page {self.page})"  

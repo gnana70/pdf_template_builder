@@ -5,6 +5,11 @@
 {% if template %}Update Template{% else %}Create Template{% endif %}
 {% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf_viewer.min.css">
+<link rel="stylesheet" href="{% static 'css/pdf_viewer.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
     <div class="px-4 py-5 sm:px-6">
@@ -43,6 +48,18 @@
                 <p class="mt-2 text-sm text-gray-500">Name should be unique across all your templates</p>
             </div>
 
+            <div class="sm:col-span-6">
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    Description
+                </label>
+                <div class="mt-1">
+                    {{ form.description }}
+                </div>
+                {% if form.description.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+
             <div class="sm:col-span-3">
                 <label for="{{ form.configuration.id_for_label }}" class="block text-sm font-medium text-gray-700">
                     Configuration *
@@ -75,18 +92,151 @@
                 {% if template and template.pdf_file %}
                 <p class="mt-2 text-sm text-blue-600">Current file: {{ template.pdf_file.name|default:"No file" }}</p>
                 {% endif %}
+                
+                <!-- PDF Viewer -->
+                <div id="pdf-viewer" class="pdf-viewer-container mt-4" style="display: {% if template and template.pdf_file %}block{% else %}none{% endif %};">
+                    <div class="pdf-controls bg-gray-100 p-2 border-b flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <button id="prev-page" class="p-2 rounded-md bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="flex items-center whitespace-nowrap">
+                                <span>Page</span>
+                                <input type="number" min="1" id="page-input" class="w-12 border-gray-300 rounded-md text-center mx-1" value="1">
+                                <span>of <span id="page-count">1</span></span>
+                            </div>
+                            <button id="next-page" class="p-2 rounded-md bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            
+                            <div class="ml-4 border-l border-gray-300 pl-4">
+                                <div class="flex items-center bg-white border border-gray-300 rounded-md overflow-hidden">
+                                    <button id="zoom-out" class="p-2 hover:bg-gray-100 focus:outline-none">
+                                        <i class="fas fa-search-minus"></i>
+                                    </button>
+                                    <span id="zoom-level" class="px-2 border-l border-r border-gray-300 min-w-[60px] text-center">100%</span>
+                                    <button id="zoom-in" class="p-2 hover:bg-gray-100 focus:outline-none">
+                                        <i class="fas fa-search-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <span id="loading-status" class="text-sm text-gray-500">Loading PDF...</span>
+                        </div>
+                    </div>
+                    
+                    <div id="pdf-container" class="relative">
+                        <div id="pdf-loading" class="flex flex-col items-center">
+                            <div class="pdf-loading-spinner"></div>
+                            <p class="mt-4 text-gray-600">Loading PDF...</p>
+                        </div>
+                    </div>
+                </div>
             </div>
             
-            <div class="sm:col-span-6">
-                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                    Description
-                </label>
-                <div class="mt-1">
-                    {{ form.description }}
+            <!-- Unique identifier text section -->
+            <div class="sm:col-span-6 border-t border-gray-200 pt-4">
+                <h3 class="text-lg font-medium text-gray-900 mb-3">Unique Identifier Text</h3>
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="{{ form.unique_identifier_text.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Identifier Text
+                        </label>
+                        <div class="mt-1">
+                            {{ form.unique_identifier_text }}
+                        </div>
+                        {% if form.unique_identifier_text.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.unique_identifier_text.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-2 text-sm text-gray-500">Text that uniquely identifies this template type (e.g., account number format, document title)</p>
+                    </div>
+                    <div>
+                        <label for="{{ form.identifier_page.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Page Number
+                        </label>
+                        <div class="mt-1">
+                            {{ form.identifier_page }}
+                        </div>
+                        {% if form.identifier_page.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.identifier_page.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-2 text-sm text-gray-500">The page number where the identifier text typically appears</p>
+                    </div>
                 </div>
-                {% if form.description.errors %}
-                <p class="mt-2 text-sm text-red-600">{{ form.description.errors.0 }}</p>
-                {% endif %}
+            </div>
+            
+            <!-- PDF Image Extraction Section -->
+            <div class="sm:col-span-6 border-t border-gray-200 pt-4">
+                <div id="pdf-images-section" class="border rounded-md bg-gray-50" style="display: {% if template and template.pdf_file %}block{% else %}none{% endif %};">
+                    <div class="px-4 py-3 border-b bg-gray-100">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-medium text-gray-900">Extract Images</h3>
+                            <button type="button" id="extract-images-btn" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <i class="fas fa-images mr-2"></i> Extract PDF Images
+                            </button>
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Extract images from the first and last pages of the PDF file</p>
+                    </div>
+                    
+                    <div id="image-section-loader" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10" style="display: none;">
+                        <div class="flex flex-col items-center">
+                            <div class="pdf-loading-spinner"></div>
+                            <p class="mt-4 text-gray-600">Processing images...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 relative">
+                        <!-- Messages container -->
+                        <div id="image-message-container"></div>
+                        
+                        <!-- Hidden template ID for create page -->
+                        {% if template %}
+                        <input type="hidden" id="template-id" value="{{ template.id }}">
+                        {% endif %}
+                        
+                        <!-- Tabs -->
+                        <div class="border-b border-gray-200">
+                            <nav class="-mb-px flex" aria-label="Tabs">
+                                <button type="button" id="extracted-tab" class="border-indigo-500 text-indigo-600 whitespace-nowrap py-2 px-4 border-b-2 font-medium text-sm">
+                                    Extracted Images
+                                </button>
+                                <button type="button" id="saved-tab" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-4 border-b-2 font-medium text-sm">
+                                    Saved Images
+                                </button>
+                            </nav>
+                        </div>
+                        
+                        <!-- Tab Content -->
+                        <div class="py-4">
+                            <!-- Extracted Images Tab -->
+                            <div id="extracted-images-tab" class="min-h-[200px]">
+                                <div id="extracted-images-container" class="p-2">
+                                    <div class="text-center text-gray-500 py-8">
+                                        <i class="fas fa-images text-4xl mb-2"></i>
+                                        <p>Click "Extract PDF Images" to view images from the PDF</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Saved Images Tab - Initially Hidden -->
+                            <div id="saved-images-tab" class="min-h-[200px]" style="display: none;">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h4 class="text-md font-medium text-gray-900">Your Saved Images</h4>
+                                    <button type="button" id="refresh-saved-images" class="inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                        <i class="fas fa-sync-alt mr-1"></i> Refresh
+                                    </button>
+                                </div>
+                                <div id="saved-images-container" class="p-2">
+                                    <div class="text-center text-gray-500 py-8">
+                                        <i class="fas fa-save text-4xl mb-2"></i>
+                                        <p>No saved images yet</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <div class="sm:col-span-6 border-t border-gray-200 pt-4">
@@ -207,10 +357,108 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
+<script src="{% static 'js/pdf_viewer.js' %}"></script>
+<script src="{% static 'js/template_images.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('template-form');
         const configSelect = document.getElementById('{{ form.configuration.id_for_label }}');
+        const pdfFileInput = document.getElementById('{{ form.pdf_file.id_for_label }}');
+        const pdfViewer = document.getElementById('pdf-viewer');
+        const pdfImagesSection = document.getElementById('pdf-images-section');
+        
+        // Initialize PDF viewer
+        initPdfViewer();
+        
+        // Handle file input change
+        if (pdfFileInput) {
+            pdfFileInput.addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
+                    const fileUrl = URL.createObjectURL(this.files[0]);
+                    pdfViewer.style.display = 'block';
+                    
+                    // Show images section if it exists
+                    if (pdfImagesSection) {
+                        pdfImagesSection.style.display = 'block';
+                    }
+                    
+                    pageNum = 1;
+                    scale = 1.0;
+                    loadPDF(fileUrl);
+                } else {
+                    pdfViewer.style.display = 'none';
+                    
+                    // Hide images section if it exists
+                    if (pdfImagesSection) {
+                        pdfImagesSection.style.display = 'none';
+                    }
+                }
+            });
+        }
+        
+        // Load existing PDF if template is being edited
+        {% if template and template.pdf_file %}
+            loadPDF("{% url 'get_template_pdf' template_pk=template.pk %}");
+            
+            // Load saved images if template exists
+            loadSavedImages({{ template.pk }});
+        {% endif %}
+        
+        // Image extraction button
+        const extractImagesBtn = document.getElementById('extract-images-btn');
+        if (extractImagesBtn) {
+            extractImagesBtn.addEventListener('click', function() {
+                {% if template %}
+                    extractImagesFromPDF({{ template.pk }});
+                {% else %}
+                    showErrorMessage('Please save the template first to extract images.');
+                {% endif %}
+            });
+        }
+        
+        // Tab switching
+        const extractedTab = document.getElementById('extracted-tab');
+        const savedTab = document.getElementById('saved-tab');
+        const extractedImagesTab = document.getElementById('extracted-images-tab');
+        const savedImagesTab = document.getElementById('saved-images-tab');
+        
+        if (extractedTab && savedTab && extractedImagesTab && savedImagesTab) {
+            extractedTab.addEventListener('click', function() {
+                extractedTab.classList.add('border-indigo-500', 'text-indigo-600');
+                extractedTab.classList.remove('border-transparent', 'text-gray-500');
+                savedTab.classList.add('border-transparent', 'text-gray-500');
+                savedTab.classList.remove('border-indigo-500', 'text-indigo-600');
+                
+                extractedImagesTab.style.display = 'block';
+                savedImagesTab.style.display = 'none';
+            });
+            
+            savedTab.addEventListener('click', function() {
+                savedTab.classList.add('border-indigo-500', 'text-indigo-600');
+                savedTab.classList.remove('border-transparent', 'text-gray-500');
+                extractedTab.classList.add('border-transparent', 'text-gray-500');
+                extractedTab.classList.remove('border-indigo-500', 'text-indigo-600');
+                
+                savedImagesTab.style.display = 'block';
+                extractedImagesTab.style.display = 'none';
+                
+                // Reload saved images when tab is shown
+                {% if template %}
+                    loadSavedImages({{ template.pk }});
+                {% endif %}
+            });
+        }
+        
+        // Refresh saved images button
+        const refreshSavedImagesBtn = document.getElementById('refresh-saved-images');
+        if (refreshSavedImagesBtn) {
+            refreshSavedImagesBtn.addEventListener('click', function() {
+                {% if template %}
+                    loadSavedImages({{ template.pk }});
+                {% endif %}
+            });
+        }
         
         // Check if we have configurations
         if (configSelect.options.length <= 1) {

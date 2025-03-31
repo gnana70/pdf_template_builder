@@ -3,7 +3,7 @@ Models initialization.
 """
 
 from .document import Document
-from .template import Template, TemplateField
+from .template import Template, TemplateField, TemplateImage
 from .field import Field
 from .table import Table, TableColumn
 from .configuration import Configuration, ConfigurationRun

@@ -1,0 +1,122 @@
+.template-container {
+    display: flex;
+    height: calc(100vh - 250px);
+    min-height: 600px;
+    margin-top: 20px;
+}
+
+/* Fix for navigation menu visibility */
+header nav .flex div .hidden.sm\:flex {
+    display: flex !important;
+}
+
+header nav .hidden.sm\:flex.sm\:items-center {
+    display: flex !important;
+    align-items: center;
+}
+
+.pdf-viewer {
+    width: 60%;
+    overflow: auto;
+    border: 1px solid #e5e7eb;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.fields-section {
+    width: 40%;
+    overflow: auto;
+    border: 1px solid #e5e7eb;
+    border-left: none;
+}
+
+#pdf-container {
+    position: relative;
+    min-height: 200px;
+    flex: 1;
+    overflow: auto;
+}
+
+.selection-overlay {
+    position: absolute;
+    border: 2px dashed #4f46e5;
+    background-color: rgba(79, 70, 229, 0.1);
+    pointer-events: none;
+}
+
+.field-overlay {
+    position: absolute;
+    border: 2px solid #10B981;
+    background-color: rgba(16, 185, 129, 0.1);
+    cursor: pointer;
+}
+
+.field-overlay.active {
+    border-color: #F59E0B;
+    background-color: rgba(245, 158, 11, 0.15);
+}
+
+.field-overlay .field-label {
+    position: absolute;
+    top: -20px;
+    left: 0;
+    background-color: #10B981;
+    color: white;
+    padding: 0 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.page-controls {
+    position: sticky;
+    top: 0;
+    background-color: white;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+
+/* Loading animation */
+.pdf-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.pdf-loading-spinner {
+    border: 3px solid rgba(79, 70, 229, 0.3);
+    border-radius: 50%;
+    border-top: 3px solid #4f46e5;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Line drawing styles */
+.vertical-line {
+    position: absolute;
+    background-color: rgba(79, 70, 229, 0.8);
+    width: 2px;
+    z-index: 100;
+}
+
+.horizontal-line {
+    position: absolute;
+    background-color: rgba(79, 70, 229, 0.8);
+    height: 2px;
+    z-index: 100;
+} 

@@ -16,7 +16,8 @@ from pdf_app.views.template_views import (
     template_list, template_create, template_update, template_delete,
     template_configure, template_field_create, template_field_update, 
     template_field_delete, extract_text_from_area, get_pdf_file, get_configuration_data,
-    template_dimensions
+    template_dimensions, template_field_api, extract_tables_api, extract_pdf_images,
+    save_template_image, get_template_images, delete_template_image
 )
 
 # Create a router for our API viewsets
@@ -80,13 +81,21 @@ urlpatterns = [
     path('templates/<int:template_pk>/fields/create/', template_field_create, name='template_field_create'),
     path('templates/fields/<int:pk>/update/', template_field_update, name='template_field_update'),
     path('templates/fields/<int:pk>/delete/', template_field_delete, name='template_field_delete'),
+    path('templates/<int:template_pk>/fields/<int:pk>/', template_field_api, name='template_field_api'),
     path('templates/<int:template_pk>/extract-text/', extract_text_from_area, name='extract_text_from_area'),
     path('templates/<int:template_pk>/pdf/', get_pdf_file, name='get_template_pdf'),
     path('templates/<int:template_pk>/get-configuration-data/', get_configuration_data, name='get_configuration_data'),
     path('templates/<int:pk>/dimensions/', template_dimensions, name='template_dimensions'),
+    path('templates/<int:template_pk>/extract-images/', extract_pdf_images, name='extract_pdf_images'),
+    path('templates/<int:template_pk>/save-image/', save_template_image, name='save_template_image'),
+    path('templates/<int:template_pk>/images/', get_template_images, name='get_template_images'),
+    path('templates/<int:template_pk>/images/<int:image_id>/delete/', delete_template_image, name='delete_template_image'),
     
     # API urls
     path('api/', include(router.urls)),
+    
+    # API Routes
+    path('api/templates/<int:pk>/extract_tables/', extract_tables_api, name='extract_tables_api'),
     
     # Include additional paths as they are implemented
     # For example, path('templates/', template_views.template_list, name='template-list'),

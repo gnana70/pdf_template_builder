@@ -11,6 +11,7 @@ class TemplateForm(forms.ModelForm):
         model = Template
         fields = [
             'name', 'configuration', 'description', 'pdf_file',
+            'unique_identifier_text', 'identifier_page',
             'unnecessary_page_position', 'unnecessary_page_delta',
             'has_watermarks', 'is_multi_account', 'account_text',
             'first_page_width', 'first_page_height'
@@ -31,6 +32,14 @@ class TemplateForm(forms.ModelForm):
             'pdf_file': forms.FileInput(attrs={
                 'class': 'form-control', 
                 'accept': 'application/pdf'
+            }),
+            'unique_identifier_text': forms.TextInput(attrs={
+                'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
+                'placeholder': 'Text used to uniquely identify this template'
+            }),
+            'identifier_page': forms.NumberInput(attrs={
+                'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
+                'min': '1'
             }),
             'unnecessary_page_position': forms.Select(attrs={
                 'class': 'form-select rounded-md shadow-sm border-gray-300 w-full'
@@ -81,7 +90,11 @@ class TemplateFieldForm(forms.ModelForm):
     
     class Meta:
         model = TemplateField
-        fields = ['name', 'custom_name', 'page', 'x', 'y', 'x1', 'y1', 'extracted_text', 'ocr_required']
+        fields = [
+            'name', 'custom_name', 'page', 'x', 'y', 'x1', 'y1', 
+            'extracted_text', 'ocr_required', 
+            'is_table', 'table_settings', 'table_drawn_cells', 'line_points'
+        ]
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-input rounded-md shadow-sm border-gray-300 w-full',
@@ -114,6 +127,24 @@ class TemplateFieldForm(forms.ModelForm):
             'extracted_text': forms.HiddenInput(),
             'ocr_required': forms.CheckboxInput(attrs={
                 'class': 'form-checkbox'
+            }),
+            'is_table': forms.CheckboxInput(attrs={
+                'class': 'form-checkbox'
+            }),
+            'table_settings': forms.Textarea(attrs={
+                'class': 'form-textarea rounded-md shadow-sm border-gray-300 w-full',
+                'rows': '3',
+                'placeholder': 'Table settings (optional)'
+            }),
+            'table_drawn_cells': forms.Textarea(attrs={
+                'class': 'form-textarea rounded-md shadow-sm border-gray-300 w-full',
+                'rows': '3',
+                'placeholder': 'Table drawn cells (optional)'
+            }),
+            'line_points': forms.Textarea(attrs={
+                'class': 'form-textarea rounded-md shadow-sm border-gray-300 w-full',
+                'rows': '3',
+                'placeholder': 'Line points (optional)'
             }),
         }
     
