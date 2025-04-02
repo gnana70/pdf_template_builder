@@ -2,6 +2,9 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.worker.min.js';
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Add variable to track overlay visibility
+    let overlaysVisible = true;
+    
     // PDF viewer
     const pdfContainer = document.getElementById('pdf-container');
     const pageInput = document.getElementById('page-input');
@@ -67,6 +70,31 @@ document.addEventListener('DOMContentLoaded', function() {
     window.currentSelection = currentSelection;
     window.isSelecting = isSelecting;
     
+    // Setup overlay toggle
+    const overlayToggle = document.getElementById('toggle-overlay');
+    if (overlayToggle) {
+        // Initialize from localStorage if available
+        if (localStorage.getItem('fieldOverlaysVisible') === 'false') {
+            overlaysVisible = false;
+            overlayToggle.checked = false;
+            // Hide any existing overlays
+            document.querySelectorAll('.field-overlay').forEach(overlay => {
+                overlay.style.display = 'none';
+            });
+        }
+        
+        // Listen for toggle changes
+        overlayToggle.addEventListener('change', function() {
+            overlaysVisible = this.checked;
+            localStorage.setItem('fieldOverlaysVisible', overlaysVisible);
+            
+            // Show/hide all field overlays
+            document.querySelectorAll('.field-overlay').forEach(overlay => {
+                overlay.style.display = overlaysVisible ? 'block' : 'none';
+            });
+        });
+    }
+    
     // Variables for storing configuration data
     let configData = {
         fields: [],
@@ -85,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Display dimensions in dedicated element
                 const dimensionsEl = document.getElementById('page-dimensions');
                 if (dimensionsEl) {
-                    dimensionsEl.textContent = `Page dimensions: ${width.toFixed(2)}×${height.toFixed(2)} pts`;
+                    dimensionsEl.textContent = `${width.toFixed(2)}×${height.toFixed(2)}`;
                 }
                 
                 // Save dimensions to the template
@@ -383,6 +411,11 @@ document.addEventListener('DOMContentLoaded', function() {
         overlay.style.top = `${y * scale}px`;
         overlay.style.width = `${width * scale}px`;
         overlay.style.height = `${height * scale}px`;
+        
+        // Set display based on overlay visibility setting
+        if (!overlaysVisible) {
+            overlay.style.display = 'none';
+        }
         
         // Get color for this field
         const fieldColor = getFieldColor(fieldId);

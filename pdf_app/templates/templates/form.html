@@ -8,6 +8,76 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf_viewer.min.css">
 <link rel="stylesheet" href="{% static 'css/pdf_viewer.css' %}">
+<style>
+    /* PDF Viewer Styles */
+    .pdf-preview-container {
+        margin-top: 15px;
+        margin-bottom: 20px;
+    }
+    
+    #pdf-container {
+        position: relative;
+        height: 600px;
+        overflow: auto;
+        background-color: #f6f6f6;
+    }
+    
+    #pdf-container canvas {
+        margin: 0 auto;
+        display: block;
+    }
+    
+    #pdf-loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.9);
+        z-index: 10;
+    }
+    
+    .pdf-loading-spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 2s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Control button styles */
+    .page-controls button {
+        transition: all 0.2s ease;
+    }
+    
+    .page-controls button:hover:not(:disabled) {
+        background-color: #f9fafb;
+        transform: translateY(-1px);
+    }
+    
+    /* Make zoom buttons more obvious */
+    #zoom-in, #zoom-out {
+        background-color: #f9fafb;
+    }
+    
+    #zoom-in:hover, #zoom-out:hover {
+        background-color: #edf2f7;
+    }
+    
+    /* Loading status text */
+    #loading-status {
+        font-style: italic;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -90,25 +160,45 @@
                     {% if template %}Update {% endif %}PDF File {% if not template %}*{% endif %}
                 </label>
                 <div class="mt-1">
-                    {{ form.pdf_file }}
+                    <div class="border-gray-300 focus-within:border-indigo-600">
+                        <label for="{{ form.pdf_file.id_for_label }}" class="block text-sm font-medium text-gray-700">PDF File</label>
+                        <div class="mt-1">
+                            {% if template.pdf_file %}
+                                <div class="flex items-center">
+                                    <span class="mr-2 text-gray-500">Current file:</span>
+                                    <span class="text-gray-700">{{ template.pdf_file.name|slice:"9:" }}</span>
+                                    <a href="{{ template.pdf_file.url }}" target="_blank" class="ml-2 text-indigo-600 hover:text-indigo-800">
+                                        <i class="fas fa-external-link-alt"></i> View
+                                    </a>
+                                </div>
+                                <div class="mt-2">
+                                    <input type="file" name="{{ form.pdf_file.name }}" id="{{ form.pdf_file.id_for_label }}" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                    {% if form.pdf_file.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.pdf_file.errors }}</div>
+                                    {% endif %}
+                                    <p class="text-sm text-gray-500 mt-1">Only upload a new file if you want to replace the existing one.</p>
+                                </div>
+                            {% else %}
+                                <input type="file" name="{{ form.pdf_file.name }}" id="{{ form.pdf_file.id_for_label }}" required class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                {% if form.pdf_file.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.pdf_file.errors }}</div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                {% if form.pdf_file.errors %}
-                <p class="mt-2 text-sm text-red-600">{{ form.pdf_file.errors.0 }}</p>
-                {% endif %}
-                <p class="mt-2 text-sm text-gray-500">
-                    {% if template %}
-                    Upload a new PDF file to replace the current one (max size: 5MB)
-                    {% else %}
-                    Upload a PDF file as the template (max size: 5MB)
-                    {% endif %}
-                </p>
-                {% if template and template.pdf_file %}
-                <p class="mt-2 text-sm text-blue-600">Current file: {{ template.pdf_file.name|default:"No file" }}</p>
-                {% endif %}
                 
-                <!-- PDF Viewer -->
-                <div id="pdf-viewer" class="pdf-viewer-container mt-4" style="display: {% if template and template.pdf_file %}block{% else %}none{% endif %};">
-                    <div class="pdf-controls bg-gray-100 p-2 border-b flex justify-between items-center">
+                <!-- Add hidden template ID field for JavaScript use -->
+                {% if template %}
+                <input type="hidden" id="template-id" value="{{ template.pk }}">
+                {% endif %}
+            </div>
+            
+            <!-- PDF Viewer Section -->
+            <div class="sm:col-span-6 border-t border-gray-200 pt-4 mt-4">
+                <h3 class="text-lg font-medium text-gray-900 mb-3">PDF Preview</h3>
+                <div class="pdf-preview-container border rounded-md bg-gray-50" style="display: {% if template and template.pdf_file %}block{% else %}none{% endif %};">
+                    <div class="page-controls bg-gray-100 p-2 border-b flex justify-between items-center">
                         <div class="flex items-center space-x-2">
                             <button id="prev-page" class="p-2 rounded-md bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50">
                                 <i class="fas fa-chevron-left"></i>
@@ -133,16 +223,22 @@
                                     </button>
                                 </div>
                             </div>
+                            
+                            <div class="ml-4 border-l border-gray-300 pl-4">
+                                <span id="page-dimensions" class="text-sm text-gray-600 bg-white px-2 py-1 rounded border border-gray-300"></span>
+                            </div>
                         </div>
                         <div>
                             <span id="loading-status" class="text-sm text-gray-500">Loading PDF...</span>
                         </div>
                     </div>
                     
-                    <div id="pdf-container" class="relative">
-                        <div id="pdf-loading" class="flex flex-col items-center">
-                            <div class="pdf-loading-spinner"></div>
-                            <p class="mt-4 text-gray-600">Loading PDF...</p>
+                    <div id="pdf-container" class="relative" style="height: 600px; overflow: auto;">
+                        <div id="pdf-loading" class="absolute top-0 left-0 w-full h-full bg-white bg-opacity-90 z-10 flex items-center justify-center">
+                            <div class="flex flex-col items-center">
+                                <div class="pdf-loading-spinner"></div>
+                                <p class="mt-4 text-gray-600">Loading PDF...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -203,11 +299,6 @@
                         <!-- Messages container -->
                         <div id="image-message-container"></div>
                         
-                        <!-- Hidden template ID for create page -->
-                        {% if template %}
-                        <input type="hidden" id="template-id" value="{{ template.id }}">
-                        {% endif %}
-                        
                         <!-- Tabs -->
                         <div class="border-b border-gray-200">
                             <nav class="-mb-px flex" aria-label="Tabs">
@@ -260,7 +351,7 @@
             <div class="sm:col-span-6 mt-4">
                 <div class="flex justify-between items-center">
                     <h4 class="text-md font-medium text-gray-900">Unnecessary Page Positions & Delta Page Values</h4>
-                    <button type="button" id="add-page-position-btn" class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <button type="button" id="add-page-position-btn" class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 {% if not template %}opacity-50 cursor-not-allowed{% endif %}" {% if not template %}disabled{% endif %}>
                         <i class="fas fa-plus mr-1"></i> Add Position
                     </button>
                 </div>
@@ -424,6 +515,7 @@
             <!-- Page dimensions -->
             <div class="sm:col-span-6 border-t border-gray-200 pt-4 mt-2">
                 <h3 class="text-lg font-medium text-gray-900 mb-3">First Page Dimensions</h3>
+                <p id="dimensions-status" class="text-sm text-gray-500 mb-2 hidden">Dimensions automatically extracted from PDF</p>
             </div>
             
             <div class="sm:col-span-3">
@@ -457,13 +549,12 @@
                     <i class="fas fa-arrow-left mr-2"></i> Back to Templates
                 </a>
             </div>
-            <div>
-                <button type="submit" class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    {% if template %}
-                    <i class="fas fa-save mr-2"></i> Update Template
-                    {% else %}
-                    <i class="fas fa-save mr-2"></i> Save Template
-                    {% endif %}
+            <div class="flex space-x-3">
+                <button type="submit" name="action" value="save" class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-save mr-2"></i> {% if template %}Update{% else %}Save{% endif %} Template
+                </button>
+                <button type="submit" name="action" value="save_configure" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-cog mr-2"></i> {% if template %}Update & Configure{% else %}Save & Configure{% endif %}
                 </button>
             </div>
         </div>
@@ -481,45 +572,64 @@
         const form = document.getElementById('template-form');
         const configSelect = document.getElementById('{{ form.configuration.id_for_label }}');
         const pdfFileInput = document.getElementById('{{ form.pdf_file.id_for_label }}');
-        const pdfViewer = document.getElementById('pdf-viewer');
         const pdfImagesSection = document.getElementById('pdf-images-section');
+        const pdfPreviewContainer = document.querySelector('.pdf-preview-container');
         
-        // Initialize PDF viewer
-        initPdfViewer();
+        // Check if we have the PDF viewer elements before initializing
+        if (document.getElementById('pdf-container')) {
+            // Initialize PDF viewer only if the container exists
+            initPdfViewer();
+            
+            // Load existing PDF if template is being edited
+            {% if template and template.pdf_file %}
+                loadPDF("{% url 'get_template_pdf' template_pk=template.pk %}", false);
+                
+                // Show the PDF preview container
+                if (pdfPreviewContainer) {
+                    pdfPreviewContainer.style.display = 'block';
+                }
+                
+                // Load saved images if template exists
+                loadSavedImages({{ template.pk }});
+            {% endif %}
+        }
         
         // Handle file input change
         if (pdfFileInput) {
             pdfFileInput.addEventListener('change', function(e) {
                 if (this.files && this.files[0]) {
                     const fileUrl = URL.createObjectURL(this.files[0]);
-                    pdfViewer.style.display = 'block';
                     
                     // Show images section if it exists
                     if (pdfImagesSection) {
                         pdfImagesSection.style.display = 'block';
                     }
                     
+                    // Show PDF preview container
+                    if (pdfPreviewContainer) {
+                        pdfPreviewContainer.style.display = 'block';
+                    }
+                    
                     pageNum = 1;
                     scale = 1.0;
-                    loadPDF(fileUrl);
-                } else {
-                    pdfViewer.style.display = 'none';
                     
+                    // Only try to load PDF if container exists
+                    if (document.getElementById('pdf-container')) {
+                        loadPDF(fileUrl, true);
+                    }
+                } else {
                     // Hide images section if it exists
                     if (pdfImagesSection) {
                         pdfImagesSection.style.display = 'none';
                     }
+                    
+                    // Hide PDF preview container
+                    if (pdfPreviewContainer) {
+                        pdfPreviewContainer.style.display = 'none';
+                    }
                 }
             });
         }
-        
-        // Load existing PDF if template is being edited
-        {% if template and template.pdf_file %}
-            loadPDF("{% url 'get_template_pdf' template_pk=template.pk %}");
-            
-            // Load saved images if template exists
-            loadSavedImages({{ template.pk }});
-        {% endif %}
         
         // Image extraction button
         const extractImagesBtn = document.getElementById('extract-images-btn');
@@ -626,24 +736,81 @@
     $(document).ready(function() {
         const container = $('#page-positions-container');
         const templateElement = document.getElementById('page-position-template');
-        const templateId = $('#template-id').val();
+        const templateId = {% if template %}{{ template.pk }}{% else %}null{% endif %};
+        const addPositionBtn = $('#add-page-position-btn');
         
-        // Add page position button click
-        $('#add-page-position-btn').click(function() {
-            // Check if we need to remove the placeholder
-            if (container.find('.page-position-item').length === 0) {
-                container.empty();
-            }
-            
-            // Clone the template
-            const clone = document.importNode(templateElement.content, true);
-            container.append(clone);
-            
-            // Initialize event handlers for the new item
-            initPagePositionHandlers(container.find('.page-position-item:last-child'));
-        });
+        // Show a message to save the template first if no template ID exists
+        if (!templateId) {
+            addPositionBtn.on('click', function(e) {
+                showMessage('Please save the template first before adding page positions.', 'error');
+                e.preventDefault();
+                return false;
+            });
+        }
+        
+        // Add page position button click - only works when template exists
+        if (templateId) {
+            addPositionBtn.on('click', function() {
+                // Check if we need to remove the placeholder
+                if (container.find('.page-position-item').length === 0) {
+                    container.empty();
+                }
+                
+                // Clone the template
+                const clone = document.importNode(templateElement.content, true);
+                container.append(clone);
+                
+                // Initialize event handlers for the new item
+                initPagePositionHandlers(container.find('.page-position-item:last-child'));
+            });
+        }
         
         // Initialize existing page positions
+        container.find('.page-position-item').each(function() {
+            initPagePositionHandlers($(this));
+        });
+        
+        // Helper function to show messages
+        function showMessage(message, type) {
+            const alertClass = type === 'success' ? 'bg-green-50 text-green-800 border-green-400' : 'bg-red-50 text-red-800 border-red-400';
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+            
+            const alertElement = $(
+                '<div class="rounded-md p-4 mb-4 ' + alertClass + ' border">' +
+                    '<div class="flex">' +
+                        '<div class="flex-shrink-0">' +
+                            '<i class="fas ' + icon + '"></i>' +
+                        '</div>' +
+                        '<div class="ml-3">' +
+                            '<p>' + message + '</p>' +
+                        '</div>' +
+                        '<div class="ml-auto pl-3">' +
+                            '<div class="-mx-1.5 -my-1.5">' +
+                                '<button type="button" class="close-alert inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">' +
+                                    '<i class="fas fa-times"></i>' +
+                                '</button>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>'
+            );
+            
+            // Insert before the page positions container
+            alertElement.insertBefore(container);
+            
+            // Add close button functionality
+            alertElement.find('.close-alert').click(function() {
+                alertElement.remove();
+            });
+            
+            // Auto-remove after 5 seconds
+            setTimeout(function() {
+                alertElement.fadeOut(500, function() {
+                    $(this).remove();
+                });
+            }, 5000);
+        }
+        
         function initPagePositionHandlers(item) {
             // Handle remove button
             item.find('.remove-page-position-btn').click(function() {
@@ -763,55 +930,35 @@
             });
         }
         
-        // Initialize existing page positions
-        container.find('.page-position-item').each(function() {
-            initPagePositionHandlers($(this));
-        });
-        
-        // Helper function to show messages
-        function showMessage(message, type) {
-            const alertClass = type === 'success' ? 'bg-green-50 text-green-800 border-green-400' : 'bg-red-50 text-red-800 border-red-400';
-            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
-            
-            const alertElement = $(
-                '<div class="rounded-md p-4 mb-4 ' + alertClass + ' border">' +
-                    '<div class="flex">' +
-                        '<div class="flex-shrink-0">' +
-                            '<i class="fas ' + icon + '"></i>' +
-                        '</div>' +
-                        '<div class="ml-3">' +
-                            '<p>' + message + '</p>' +
-                        '</div>' +
-                        '<div class="ml-auto pl-3">' +
-                            '<div class="-mx-1.5 -my-1.5">' +
-                                '<button type="button" class="close-alert inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">' +
-                                    '<i class="fas fa-times"></i>' +
-                                '</button>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>'
-            );
-            
-            // Insert before the page positions container
-            alertElement.insertBefore(container);
-            
-            // Add close button functionality
-            alertElement.find('.close-alert').click(function() {
-                alertElement.remove();
-            });
-            
-            // Auto-remove after 5 seconds
-            setTimeout(function() {
-                alertElement.fadeOut(500, function() {
-                    $(this).remove();
-                });
-            }, 5000);
-        }
-        
-        // Form submission handling - keep this but don't collect positions as they're saved via API now
+        // Form submission handling - collect positions only if template exists
         $('#template-form').submit(function() {
-            // No need to collect positions on form submit as they are saved separately via API
+            if (templateId) {
+                // Collect all page positions for existing templates
+                const positions = [];
+                container.find('.page-position-item').each(function() {
+                    const item = $(this);
+                    const position = item.find('select[name="position[]"]').val();
+                    const delta = item.find('input[name="delta[]"]').val();
+                    const pageNumber = position === 'custom' ? item.find('input[name="page_number[]"]').val() : null;
+                    
+                    positions.push({
+                        position: position,
+                        delta: parseInt(delta) || 0,
+                        page_number: pageNumber ? parseInt(pageNumber) : null
+                    });
+                });
+                
+                // Add as hidden input
+                if (positions.length > 0) {
+                    const positionsJson = JSON.stringify(positions);
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'page_positions_json',
+                        value: positionsJson
+                    }).appendTo($(this));
+                }
+            }
+            
             return true;
         });
     });

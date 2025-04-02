@@ -18,6 +18,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const pdfContainer = document.getElementById('pdf-container');
     const loadingStatus = document.getElementById('loading-status');
     
+    // Get page and zoom control elements
+    const prevPageBtn = document.getElementById('prev-page');
+    const nextPageBtn = document.getElementById('next-page');
+    const pageInput = document.getElementById('page-input');
+    const zoomInBtn = document.getElementById('zoom-in');
+    const zoomOutBtn = document.getElementById('zoom-out');
+    
     // Line drawing controls (replacing table drawing controls)
     const addVerticalLineBtn = document.getElementById('add-vertical-line-btn');
     const addHorizontalLineBtn = document.getElementById('add-horizontal-line-btn');
@@ -27,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Table-related variables
     let extractedTables = [];
     let tableSettings = {
-        strategy: 'lines',              // Default overall strategy
+        strategy: 'lines_strict',              // Default overall strategy (changed from 'lines')
         horizontal_strategy: 'lines_strict', // Default strategy for horizontal
         vertical_strategy: 'lines_strict',   // Default strategy for vertical
         snap_tolerance: 3,
@@ -175,9 +182,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         ${table.rows.length} rows × ${table.rows[0]?.length || 0} columns
                     </div>
                 </div>
-                <button class="view-table-btn text-indigo-600 hover:text-indigo-800" data-table-index="${index}">
-                    <i class="fas fa-eye"></i>
-                </button>
+                <div>
+                    <button class="view-table-btn text-indigo-600 hover:text-indigo-800 mr-2" data-table-index="${index}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="configure-table-btn text-blue-600 hover:text-blue-800 mr-2" data-table-index="${index}">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button class="highlight-table-btn text-green-600 hover:text-green-800" data-table-index="${index}">
+                        <i class="fas fa-border-all"></i>
+                    </button>
+                </div>
             `;
             
             extractedTablesList.appendChild(tableItem);
@@ -191,6 +206,615 @@ document.addEventListener('DOMContentLoaded', function() {
                 viewExtractedTable(tableIndex);
             });
         });
+        
+        // Add event listeners to configure buttons
+        document.querySelectorAll('.configure-table-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tableIndex = parseInt(e.currentTarget.dataset.tableIndex);
+                
+                // Check if is-table-field checkbox exists (it should be hidden but still functional)
+                const isTableField = document.getElementById('is-table-field');
+                if(isTableField) {
+                    // Set the checkbox to checked
+                    isTableField.checked = true;
+                    
+                    // Show the table controls
+                    const tableControls = document.getElementById('table-controls');
+                    if(tableControls) {
+                        tableControls.classList.remove('hidden');
+                    }
+                    
+                    // If we have a table advanced settings button, simulate a click to open settings
+                    const tableAdvancedSettingsBtn = document.getElementById('table-advanced-settings-btn');
+                    if(tableAdvancedSettingsBtn) {
+                        tableAdvancedSettingsBtn.click();
+                    }
+                }
+            });
+        });
+        
+        // Add event listeners to highlight buttons
+        document.querySelectorAll('.highlight-table-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tableIndex = parseInt(e.currentTarget.dataset.tableIndex);
+                highlightTableOnPdf(tableIndex);
+            });
+        });
+        
+        // Always draw tables on the PDF
+        drawTablesOnPdf(tables);
+    }
+    
+    // Function to draw all extracted tables on the PDF
+    function drawTablesOnPdf(tables) {
+        // Clear any existing table overlays
+        clearTableOverlays();
+        
+        // Draw each table
+        tables.forEach((table, index) => {
+            drawTableOverlay(table, index);
+        });
+    }
+    
+    // Function to clear all table overlays
+    function clearTableOverlays() {
+        const existingOverlays = document.querySelectorAll('.table-overlay');
+        existingOverlays.forEach(overlay => {
+            overlay.remove();
+        });
+    }
+    
+    // Function to draw a single table overlay
+    function drawTableOverlay(table, tableIndex) {
+        if (!table || !table.bbox || !pdfContainer) return;
+        
+        // Detailed logging of table data
+        console.log('=== TABLE OVERLAY DEBUG INFO ===');
+        console.log('Table index:', tableIndex);
+        console.log('Table bbox:', table.bbox);
+        console.log('Row count:', table.row_count);
+        console.log('Column count:', table.col_count);
+        console.log('Has header:', table.has_header);
+        console.log('Has rows_positions:', !!table.rows_positions);
+        console.log('Has cols_positions:', !!table.cols_positions);
+        console.log('Has table_rows:', !!table.table_rows);
+        if (table.table_rows) {
+            console.log('table_rows length:', table.table_rows.length);
+            console.log('First table_row:', table.table_rows[0]);
+        }
+        console.log('Has cells array:', !!table.cells);
+        if (table.cells) {
+            console.log('cells length:', table.cells.length);
+            console.log('First cell row length:', table.cells[0] ? table.cells[0].length : 0);
+            console.log('First cell in first row:', table.cells[0] && table.cells[0][0] ? table.cells[0][0] : null);
+        }
+        console.log('Table data rows:', table.rows ? table.rows.length : 0);
+        console.log('Full table object:', table);
+        console.log('=== END DEBUG INFO ===');
+        
+        const [x0, y0, x1, y1] = table.bbox;
+        
+        // Apply scale to coordinates
+        const scaledX0 = x0 * window.scale;
+        const scaledY0 = y0 * window.scale;
+        const scaledX1 = x1 * window.scale;
+        const scaledY1 = y1 * window.scale;
+        
+        // Create the overlay element
+        const overlay = document.createElement('div');
+        overlay.className = 'table-overlay';
+        overlay.dataset.tableIndex = tableIndex;
+        overlay.style.position = 'absolute';
+        overlay.style.left = `${scaledX0}px`;
+        overlay.style.top = `${scaledY0}px`;
+        overlay.style.width = `${scaledX1 - scaledX0}px`;
+        overlay.style.height = `${scaledY1 - scaledY0}px`;
+        overlay.style.border = '2px solid rgba(99, 102, 241, 0.7)';
+        overlay.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+        overlay.style.zIndex = '15'; // Changed from 100 to 15 (below modal z-index of 20)
+        overlay.style.pointerEvents = 'none'; // Don't interfere with PDF interaction
+        overlay.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+        
+        // Add a label
+        const label = document.createElement('div');
+        label.className = 'table-overlay-label';
+        label.innerHTML = `Table ${tableIndex + 1}`;
+        label.style.position = 'absolute';
+        label.style.top = '-24px';
+        label.style.left = '0';
+        label.style.backgroundColor = 'rgba(99, 102, 241, 0.9)';
+        label.style.color = 'white';
+        label.style.padding = '2px 6px';
+        label.style.borderRadius = '4px';
+        label.style.fontSize = '12px';
+        label.style.fontWeight = 'bold';
+        label.style.zIndex = '15'; // Ensure label has same z-index as overlay
+        overlay.appendChild(label);
+        
+        // Add the overlay to the PDF container
+        pdfContainer.appendChild(overlay);
+        
+        // Draw cell grid if we have row and column data
+        if (table.rows && table.rows.length > 0) {
+            drawTableCellGrid(overlay, table);
+        }
+    }
+    
+    // Function to draw the cell grid within a table overlay
+    function drawTableCellGrid(overlay, table) {
+        console.log('=== DRAWING TABLE CELL GRID ===');
+        
+        if (!table.rows || table.rows.length === 0) {
+            console.log('No rows data found, cannot draw grid');
+            return;
+        }
+        
+        const rows = table.row_count || table.rows.length;
+        const cols = table.col_count || (table.rows[0] ? table.rows[0].length : 0);
+        console.log(`Table dimensions: ${rows} rows × ${cols} columns`);
+        
+        if (rows <= 1 || cols <= 1) {
+            console.log('Not enough rows/columns to draw grid');
+            return;
+        }
+        
+        const overlayWidth = parseFloat(overlay.style.width);
+        const overlayHeight = parseFloat(overlay.style.height);
+        console.log(`Overlay dimensions: ${overlayWidth}px × ${overlayHeight}px`);
+        
+        // Get table bbox to calculate relative positions
+        const [tableX0, tableY0, tableX1, tableY1] = table.bbox;
+        const tableWidth = tableX1 - tableX0;
+        const tableHeight = tableY1 - tableY0;
+        
+        // Debug properties available for grid drawing
+        console.log('GRID DRAWING METHOD DETECTION:');
+        console.log('- rows_positions available:', !!table.rows_positions && table.rows_positions.length > 0);
+        if (table.rows_positions) console.log('  rows_positions:', table.rows_positions);
+        
+        console.log('- cols_positions available:', !!table.cols_positions && table.cols_positions.length > 0);
+        if (table.cols_positions) console.log('  cols_positions:', table.cols_positions);
+        
+        console.log('- table_rows available:', !!table.table_rows && Array.isArray(table.table_rows) && table.table_rows.length > 0);
+        if (table.table_rows && table.table_rows.length > 0) {
+            console.log('  table_rows length:', table.table_rows.length);
+            console.log('  First table_row has bbox:', !!(table.table_rows[0] && table.table_rows[0].bbox));
+            if (table.table_rows[0] && table.table_rows[0].bbox) console.log('  First table_row bbox:', table.table_rows[0].bbox);
+            
+            // Check for cells property in table_rows
+            console.log('  First table_row has cells:', !!(table.table_rows[0] && table.table_rows[0].cells));
+            if (table.table_rows[0] && table.table_rows[0].cells) {
+                console.log('  First table_row cells length:', table.table_rows[0].cells.length);
+                console.log('  First cell in first row has bbox:', !!(table.table_rows[0].cells[0] && table.table_rows[0].cells[0].bbox));
+                if (table.table_rows[0].cells[0] && table.table_rows[0].cells[0].bbox) {
+                    console.log('  First cell bbox:', table.table_rows[0].cells[0].bbox);
+                }
+            }
+        }
+        
+        // If table has actual row and column coordinate data from PyMuPDF, use them
+        if (table.rows_positions && table.rows_positions.length > 0 && 
+            table.cols_positions && table.cols_positions.length > 0) {
+            
+            console.log('DRAWING METHOD: Using actual row and column positions from PyMuPDF');
+            
+            // Draw horizontal lines based on actual row positions
+            for (let r = 1; r < table.rows_positions.length; r++) {
+                const rowPosition = table.rows_positions[r];
+                const rowY = (rowPosition - tableY0) * window.scale;
+                
+                const rowLine = document.createElement('div');
+                rowLine.className = 'table-cell-line horizontal';
+                rowLine.style.position = 'absolute';
+                rowLine.style.left = '0';
+                rowLine.style.top = `${rowY}px`;
+                rowLine.style.width = '100%';
+                rowLine.style.height = '1px';
+                rowLine.style.backgroundColor = 'rgba(99, 102, 241, 0.5)';
+                rowLine.style.zIndex = '15';
+                overlay.appendChild(rowLine);
+            }
+            
+            // Draw vertical lines based on actual column positions
+            for (let c = 1; c < table.cols_positions.length; c++) {
+                const colPosition = table.cols_positions[c];
+                const colX = (colPosition - tableX0) * window.scale;
+                
+                const colLine = document.createElement('div');
+                colLine.className = 'table-cell-line vertical';
+                colLine.style.position = 'absolute';
+                colLine.style.left = `${colX}px`;
+                colLine.style.top = '0';
+                colLine.style.width = '1px';
+                colLine.style.height = '100%';
+                colLine.style.backgroundColor = 'rgba(99, 102, 241, 0.5)';
+                colLine.style.zIndex = '15';
+                overlay.appendChild(colLine);
+            }
+            
+            // If the table has a header, add a slightly thicker line below the header row
+            if (table.has_header && table.rows_positions.length > 1) {
+                const headerY = (table.rows_positions[1] - tableY0) * window.scale;
+                
+                const headerLine = document.createElement('div');
+                headerLine.className = 'table-cell-line header-line';
+                headerLine.style.position = 'absolute';
+                headerLine.style.left = '0';
+                headerLine.style.top = `${headerY}px`;
+                headerLine.style.width = '100%';
+                headerLine.style.height = '2px'; // Thicker line
+                headerLine.style.backgroundColor = 'rgba(99, 102, 241, 0.8)'; // More visible
+                headerLine.style.zIndex = '15';
+                overlay.appendChild(headerLine);
+            }
+        }
+        // If table rows have bbox information, use that
+        else if (table.table_rows && Array.isArray(table.table_rows) && table.table_rows.length > 0 && 
+                table.table_rows[0] && typeof table.table_rows[0] === 'object' && 
+                table.table_rows[0].bbox) {
+            
+            // Check if we have cells with bbox information
+            const hasCellData = table.table_rows[0].cells && 
+                                Array.isArray(table.table_rows[0].cells) &&
+                                table.table_rows[0].cells.length > 0 &&
+                                table.table_rows[0].cells[0].bbox;
+            
+            if (hasCellData) {
+                console.log('DRAWING METHOD: Using cell-level bbox data from table_rows');
+                
+                // Create maps to track unique row and column positions
+                const rowPositions = new Set();
+                const colPositions = new Set();
+                
+                // Extract all row and column positions from cell bboxes
+                for (let r = 0; r < table.table_rows.length; r++) {
+                    const row = table.table_rows[r];
+                    if (!row || !row.cells || !Array.isArray(row.cells)) continue;
+                    
+                    // Add row bottom boundary
+                    if (row.bbox) {
+                        const [rowX0, rowY0, rowX1, rowY1] = row.bbox;
+                        rowPositions.add(rowY1);  // Bottom of row
+                    }
+                    
+                    // Process each cell in the row
+                    for (let c = 0; c < row.cells.length; c++) {
+                        const cell = row.cells[c];
+                        if (!cell || !cell.bbox) continue;
+                        
+                        const [cellX0, cellY0, cellX1, cellY1] = cell.bbox;
+                        
+                        // Add right edge of cell to column positions
+                        colPositions.add(cellX1);
+                    }
+                }
+                
+                // Sort positions
+                const sortedRowPositions = [...rowPositions].sort((a, b) => a - b);
+                const sortedColPositions = [...colPositions].sort((a, b) => a - b);
+                
+                // Draw horizontal lines based on row boundaries
+                for (let i = 0; i < sortedRowPositions.length; i++) {
+                    const rowPosition = sortedRowPositions[i];
+                    if (rowPosition <= tableY0 || rowPosition >= tableY1) continue; // Skip out of bounds
+                    
+                    const rowY = (rowPosition - tableY0) * window.scale;
+                    
+                    const rowLine = document.createElement('div');
+                    rowLine.className = 'table-cell-line horizontal';
+                    rowLine.style.position = 'absolute';
+                    rowLine.style.left = '0';
+                    rowLine.style.top = `${rowY}px`;
+                    rowLine.style.width = '100%';
+                    rowLine.style.height = '1px';
+                    rowLine.style.backgroundColor = 'rgba(99, 102, 241, 0.5)';
+                    rowLine.style.zIndex = '15';
+                    overlay.appendChild(rowLine);
+                }
+                
+                // Draw vertical lines based on column positions
+                for (let i = 0; i < sortedColPositions.length; i++) {
+                    const colPosition = sortedColPositions[i];
+                    if (colPosition <= tableX0 || colPosition >= tableX1) continue; // Skip out of bounds
+                    
+                    const colX = (colPosition - tableX0) * window.scale;
+                    
+                    const colLine = document.createElement('div');
+                    colLine.className = 'table-cell-line vertical';
+                    colLine.style.position = 'absolute';
+                    colLine.style.left = `${colX}px`;
+                    colLine.style.top = '0';
+                    colLine.style.width = '1px';
+                    colLine.style.height = '100%';
+                    colLine.style.backgroundColor = 'rgba(99, 102, 241, 0.5)';
+                    colLine.style.zIndex = '15';
+                    overlay.appendChild(colLine);
+                }
+                
+                // If the table has a header, add a slightly thicker line below the first row
+                if (table.has_header && table.table_rows.length > 0 && table.table_rows[0] && 
+                    table.table_rows[0].bbox) {
+                    
+                    const headerRowY1 = table.table_rows[0].bbox[3];
+                    const headerY = (headerRowY1 - tableY0) * window.scale;
+                    
+                    const headerLine = document.createElement('div');
+                    headerLine.className = 'table-cell-line header-line';
+                    headerLine.style.position = 'absolute';
+                    headerLine.style.left = '0';
+                    headerLine.style.top = `${headerY}px`;
+                    headerLine.style.width = '100%';
+                    headerLine.style.height = '2px'; // Thicker line
+                    headerLine.style.backgroundColor = 'rgba(99, 102, 241, 0.8)'; // More visible
+                    headerLine.style.zIndex = '15';
+                    overlay.appendChild(headerLine);
+                }
+            } else {
+                console.log('DRAWING METHOD: Using table_rows bbox data to draw grid (no cell-level data)');
+                
+                // Create maps to track unique row positions
+                const rowPositions = new Set();
+                
+                // Extract all row positions from row bboxes
+                for (let r = 0; r < table.table_rows.length; r++) {
+                    const row = table.table_rows[r];
+                    if (row && typeof row === 'object' && row.bbox) {
+                        // Get bottom edge of row
+                        const [rowX0, rowY0, rowX1, rowY1] = row.bbox;
+                        rowPositions.add(rowY1);
+                    }
+                }
+                
+                // Sort row positions
+                const sortedRowPositions = [...rowPositions].sort((a, b) => a - b);
+                
+                // Draw horizontal lines based on row boundaries
+                for (let i = 0; i < sortedRowPositions.length; i++) {
+                    const rowPosition = sortedRowPositions[i];
+                    if (rowPosition <= tableY0 || rowPosition >= tableY1) continue; // Skip out of bounds
+                    
+                    const rowY = (rowPosition - tableY0) * window.scale;
+                    
+                    const rowLine = document.createElement('div');
+                    rowLine.className = 'table-cell-line horizontal';
+                    rowLine.style.position = 'absolute';
+                    rowLine.style.left = '0';
+                    rowLine.style.top = `${rowY}px`;
+                    rowLine.style.width = '100%';
+                    rowLine.style.height = '1px';
+                    rowLine.style.backgroundColor = 'rgba(99, 102, 241, 0.5)';
+                    rowLine.style.zIndex = '15';
+                    overlay.appendChild(rowLine);
+                }
+                
+                // Draw evenly spaced columns since we don't have cell-level bbox data
+                for (let c = 1; c < cols; c++) {
+                    const colLine = document.createElement('div');
+                    colLine.className = 'table-cell-line vertical';
+                    colLine.style.position = 'absolute';
+                    colLine.style.left = `${(c / cols) * overlayWidth}px`;
+                    colLine.style.top = '0';
+                    colLine.style.width = '1px';
+                    colLine.style.height = '100%';
+                    colLine.style.backgroundColor = 'rgba(99, 102, 241, 0.5)';
+                    colLine.style.zIndex = '15';
+                    overlay.appendChild(colLine);
+                }
+                
+                // If the table has a header, add a slightly thicker line below the first row
+                if (table.has_header && table.table_rows.length > 0 && table.table_rows[0] && 
+                    table.table_rows[0].bbox) {
+                    
+                    const headerRowY1 = table.table_rows[0].bbox[3];
+                    const headerY = (headerRowY1 - tableY0) * window.scale;
+                    
+                    const headerLine = document.createElement('div');
+                    headerLine.className = 'table-cell-line header-line';
+                    headerLine.style.position = 'absolute';
+                    headerLine.style.left = '0';
+                    headerLine.style.top = `${headerY}px`;
+                    headerLine.style.width = '100%';
+                    headerLine.style.height = '2px'; // Thicker line
+                    headerLine.style.backgroundColor = 'rgba(99, 102, 241, 0.8)'; // More visible
+                    headerLine.style.zIndex = '15';
+                    overlay.appendChild(headerLine);
+                }
+            }
+        }
+        // If table has cell data with bbox information
+        else if (table.cells && table.cells.length > 0 && table.cells[0].length > 0 && 
+                 table.cells[0][0] && typeof table.cells[0][0] === 'object') {
+            
+            console.log('DRAWING METHOD: Using cell bbox data to draw grid');
+            
+            // Create maps to track unique row and column positions
+            const rowPositions = new Set();
+            const colPositions = new Set();
+            
+            // Extract all row and column positions from cell bboxes
+            for (let r = 0; r < table.cells.length; r++) {
+                if (!Array.isArray(table.cells[r])) continue;
+                
+                for (let c = 0; c < table.cells[r].length; c++) {
+                    const cell = table.cells[r][c];
+                    if (cell && typeof cell === 'object' && cell.bbox) {
+                        const [cellX0, cellY0, cellX1, cellY1] = cell.bbox;
+                        
+                        // Add bottom edge of cell to row positions
+                        rowPositions.add(cellY1);
+                        
+                        // Add right edge of cell to column positions
+                        colPositions.add(cellX1);
+                    }
+                }
+            }
+            
+            // Sort positions
+            const sortedRowPositions = [...rowPositions].sort((a, b) => a - b);
+            const sortedColPositions = [...colPositions].sort((a, b) => a - b);
+            
+            // Draw horizontal lines based on cell boundaries
+            for (let i = 0; i < sortedRowPositions.length; i++) {
+                const rowPosition = sortedRowPositions[i];
+                if (rowPosition <= tableY0 || rowPosition >= tableY1) continue; // Skip out of bounds
+                
+                const rowY = (rowPosition - tableY0) * window.scale;
+                
+                const rowLine = document.createElement('div');
+                rowLine.className = 'table-cell-line horizontal';
+                rowLine.style.position = 'absolute';
+                rowLine.style.left = '0';
+                rowLine.style.top = `${rowY}px`;
+                rowLine.style.width = '100%';
+                rowLine.style.height = '1px';
+                rowLine.style.backgroundColor = 'rgba(99, 102, 241, 0.5)';
+                rowLine.style.zIndex = '15';
+                overlay.appendChild(rowLine);
+            }
+            
+            // Draw vertical lines based on cell boundaries
+            for (let i = 0; i < sortedColPositions.length; i++) {
+                const colPosition = sortedColPositions[i];
+                if (colPosition <= tableX0 || colPosition >= tableX1) continue; // Skip out of bounds
+                
+                const colX = (colPosition - tableX0) * window.scale;
+                
+                const colLine = document.createElement('div');
+                colLine.className = 'table-cell-line vertical';
+                colLine.style.position = 'absolute';
+                colLine.style.left = `${colX}px`;
+                colLine.style.top = '0';
+                colLine.style.width = '1px';
+                colLine.style.height = '100%';
+                colLine.style.backgroundColor = 'rgba(99, 102, 241, 0.5)';
+                colLine.style.zIndex = '15';
+                overlay.appendChild(colLine);
+            }
+            
+            // If the table has a header, add a slightly thicker line below the first row
+            if (table.has_header && table.cells.length > 0 && Array.isArray(table.cells[0]) && 
+                table.cells[0].length > 0 && table.cells[0][0] && 
+                typeof table.cells[0][0] === 'object' && table.cells[0][0].bbox) {
+                
+                const headerCellY1 = table.cells[0][0].bbox[3];
+                const headerY = (headerCellY1 - tableY0) * window.scale;
+                
+                const headerLine = document.createElement('div');
+                headerLine.className = 'table-cell-line header-line';
+                headerLine.style.position = 'absolute';
+                headerLine.style.left = '0';
+                headerLine.style.top = `${headerY}px`;
+                headerLine.style.width = '100%';
+                headerLine.style.height = '2px'; // Thicker line
+                headerLine.style.backgroundColor = 'rgba(99, 102, 241, 0.8)'; // More visible
+                headerLine.style.zIndex = '15';
+                overlay.appendChild(headerLine);
+            }
+        }
+        // Fallback to evenly spaced grid if no detailed position data
+        else {
+            console.log('DRAWING METHOD: Using evenly spaced grid as fallback - detailed cell positions unavailable');
+            console.log('REASON: None of the detailed positioning methods were available');
+            
+            // Add a message inside the overlay to inform the user
+            const infoMessage = document.createElement('div');
+            infoMessage.className = 'table-info-message';
+            infoMessage.style.position = 'absolute';
+            infoMessage.style.left = '50%';
+            infoMessage.style.top = '50%';
+            infoMessage.style.transform = 'translate(-50%, -50%)';
+            infoMessage.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+            infoMessage.style.color = '#4F46E5';
+            infoMessage.style.padding = '5px 10px';
+            infoMessage.style.borderRadius = '4px';
+            infoMessage.style.fontSize = '12px';
+            infoMessage.style.fontWeight = 'bold';
+            infoMessage.style.whiteSpace = 'nowrap';
+            infoMessage.style.zIndex = '16';
+            infoMessage.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            infoMessage.textContent = 'Approximate grid - exact cell positions unavailable';
+            overlay.appendChild(infoMessage);
+            
+            // Draw horizontal lines (row dividers)
+            for (let r = 1; r < rows; r++) {
+                const rowLine = document.createElement('div');
+                rowLine.className = 'table-cell-line horizontal';
+                rowLine.style.position = 'absolute';
+                rowLine.style.left = '0';
+                rowLine.style.top = `${(r / rows) * overlayHeight}px`;
+                rowLine.style.width = '100%';
+                rowLine.style.height = '1px';
+                rowLine.style.backgroundColor = 'rgba(99, 102, 241, 0.5)';
+                rowLine.style.zIndex = '15';
+                overlay.appendChild(rowLine);
+            }
+            
+            // Draw vertical lines (column dividers)
+            for (let c = 1; c < cols; c++) {
+                const colLine = document.createElement('div');
+                colLine.className = 'table-cell-line vertical';
+                colLine.style.position = 'absolute';
+                colLine.style.left = `${(c / cols) * overlayWidth}px`;
+                colLine.style.top = '0';
+                colLine.style.width = '1px';
+                colLine.style.height = '100%';
+                colLine.style.backgroundColor = 'rgba(99, 102, 241, 0.5)';
+                colLine.style.zIndex = '15';
+                overlay.appendChild(colLine);
+            }
+            
+            // If the table has a header, add a slightly thicker line below the header row
+            if (table.has_header) {
+                const headerLine = document.createElement('div');
+                headerLine.className = 'table-cell-line header-line';
+                headerLine.style.position = 'absolute';
+                headerLine.style.left = '0';
+                headerLine.style.top = `${overlayHeight / rows}px`;
+                headerLine.style.width = '100%';
+                headerLine.style.height = '2px'; // Thicker line
+                headerLine.style.backgroundColor = 'rgba(99, 102, 241, 0.8)'; // More visible
+                headerLine.style.zIndex = '15';
+                overlay.appendChild(headerLine);
+            }
+        }
+        
+        console.log('=== END DRAWING TABLE CELL GRID ===');
+    }
+    
+    // Function to highlight a specific table on the PDF
+    function highlightTableOnPdf(tableIndex) {
+        const table = extractedTables[tableIndex];
+        if (!table) return;
+        
+        // Clear existing highlights
+        clearTableOverlays();
+        
+        // Draw the selected table with a different color
+        drawTableOverlay(table, tableIndex);
+        
+        // Update the highlight style to be more prominent
+        const overlay = document.querySelector('.table-overlay');
+        if (overlay) {
+            overlay.style.border = '3px solid rgba(16, 185, 129, 0.9)'; // Green border
+            overlay.style.backgroundColor = 'rgba(16, 185, 129, 0.2)'; // Green background
+            overlay.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+            overlay.style.zIndex = '15'; // Ensure z-index is correct
+            
+            const label = overlay.querySelector('.table-overlay-label');
+            if (label) {
+                label.style.backgroundColor = 'rgba(16, 185, 129, 0.9)'; // Green label
+                label.style.zIndex = '15'; // Ensure z-index is correct
+            }
+            
+            // Update cell lines to be more visible
+            const cellLines = overlay.querySelectorAll('.table-cell-line');
+            cellLines.forEach(line => {
+                line.style.backgroundColor = 'rgba(16, 185, 129, 0.7)';
+                line.style.zIndex = '15'; // Ensure z-index is correct
+            });
+        }
     }
     
     // Function to view an extracted table in a modal
@@ -198,11 +822,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const table = extractedTables[tableIndex];
         if (!table) return;
         
+        // Store the current table index in the modal's dataset for the download function
+        viewTableModal.dataset.currentTableIndex = tableIndex;
+        
         // Create HTML table from the extracted data
         let tableHtml = '<table class="min-w-full divide-y divide-gray-300 border">';
         
-        // Add header row if present
-        const hasHeader = true; // You can make this configurable
+        // Get whether the table has a header
+        const hasHeader = table.has_header !== undefined ? table.has_header : true;
         
         if (hasHeader && table.rows.length > 0) {
             tableHtml += '<thead class="bg-gray-50"><tr>';
@@ -228,8 +855,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         tableHtml += '</tbody></table>';
         
+        // Add table metadata
+        const tableInfo = `
+            <div class="mb-4 text-sm">
+                <div class="font-medium text-gray-700 mb-1">Table Information:</div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><span class="text-gray-500">Size:</span> ${table.row_count} rows × ${table.col_count} columns</div>
+                    <div><span class="text-gray-500">Position:</span> [${Math.round(table.bbox[0])}, ${Math.round(table.bbox[1])}, ${Math.round(table.bbox[2])}, ${Math.round(table.bbox[3])}]</div>
+                    <div><span class="text-gray-500">Has Header:</span> ${hasHeader ? 'Yes' : 'No'}</div>
+                </div>
+            </div>
+        `;
+        
         // Set content and show modal
-        tableContent.innerHTML = tableHtml;
+        tableContent.innerHTML = tableInfo + tableHtml;
         viewTableModal.classList.remove('hidden');
     }
     
@@ -238,6 +877,63 @@ document.addEventListener('DOMContentLoaded', function() {
         closeTableViewBtn.addEventListener('click', () => {
             viewTableModal.classList.add('hidden');
         });
+    }
+    
+    // Download table as CSV
+    const downloadCsvBtn = document.getElementById('download-csv-btn');
+    if (downloadCsvBtn) {
+        downloadCsvBtn.addEventListener('click', () => {
+            // Get the currently viewed table
+            const tableIndex = parseInt(viewTableModal.dataset.currentTableIndex);
+            const table = extractedTables[tableIndex];
+            if (!table) return;
+            
+            // Convert table data to CSV
+            const csv = convertTableToCSV(table);
+            
+            // Create a download link
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create a temporary link and trigger download
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `table_${tableIndex + 1}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    }
+    
+    // Function to convert table data to CSV format
+    function convertTableToCSV(table) {
+        if (!table || !table.rows || table.rows.length === 0) return '';
+        
+        // Get whether the table has a header
+        const hasHeader = table.has_header !== undefined ? table.has_header : true;
+        
+        // Process each row
+        const csvRows = table.rows.map(row => {
+            // Convert each cell value, handle empty cells and values with commas
+            return row.map(cell => {
+                // If cell is empty, return empty string
+                if (cell === null || cell === undefined || cell === '') return '';
+                
+                // Convert to string and escape quotes
+                const cellStr = String(cell).replace(/"/g, '""');
+                
+                // If the cell contains commas, quotes, or newlines, wrap in quotes
+                if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+                    return `"${cellStr}"`;
+                }
+                
+                return cellStr;
+            }).join(',');
+        });
+        
+        // Return the CSV content
+        return csvRows.join('\n');
     }
     
     // Draw Table Button Click - Renamed to Draw Lines
@@ -349,7 +1045,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create line element with direct styling
         const line = document.createElement('div');
         line.style.position = 'absolute';
-        line.style.zIndex = '1000';
+        line.style.zIndex = '15'; // Changed from 1000 to 15 to be below modal z-index of 20
         
         if (type === 'vertical') {
             line.style.left = `${x1}px`;
@@ -378,7 +1074,7 @@ document.addEventListener('DOMContentLoaded', function() {
         label.style.padding = '2px 4px';
         label.style.borderRadius = '4px';
         label.style.fontSize = '10px';
-        label.style.zIndex = '1001';
+        label.style.zIndex = '15'; // Changed from 1001 to 15 to be below modal z-index of 20
         
         if (type === 'vertical') {
             // Position at the top of the line
@@ -502,7 +1198,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create line element
         const line = document.createElement('div');
         line.style.position = 'absolute';
-        line.style.zIndex = '1000';
+        line.style.zIndex = '15'; // Changed from 1000 to 15 to be below modal z-index of 20
         
         if (type === 'vertical') {
             line.style.left = `${x1}px`;
@@ -686,4 +1382,57 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Table settings saved.');
         });
     }
+    
+    // Add event listeners for page changes to update table overlays
+    if (prevPageBtn) {
+        prevPageBtn.addEventListener('click', () => {
+            // Clear table overlays when changing pages
+            clearTableOverlays();
+        });
+    }
+    
+    if (nextPageBtn) {
+        nextPageBtn.addEventListener('click', () => {
+            // Clear table overlays when changing pages
+            clearTableOverlays();
+        });
+    }
+    
+    if (pageInput) {
+        pageInput.addEventListener('change', () => {
+            // Clear table overlays when changing pages
+            clearTableOverlays();
+        });
+    }
+    
+    // Add event listeners for zoom changes to update table overlays
+    if (zoomInBtn) {
+        zoomInBtn.addEventListener('click', () => {
+            // Wait for zoom to apply before redrawing tables
+            setTimeout(() => {
+                if (extractedTables.length > 0) {
+                    drawTablesOnPdf(extractedTables);
+                }
+            }, 100);
+        });
+    }
+    
+    if (zoomOutBtn) {
+        zoomOutBtn.addEventListener('click', () => {
+            // Wait for zoom to apply before redrawing tables
+            setTimeout(() => {
+                if (extractedTables.length > 0) {
+                    drawTablesOnPdf(extractedTables);
+                }
+            }, 100);
+        });
+    }
+    
+    // Listen for custom scale change event if it exists
+    document.addEventListener('pdfScaleChanged', () => {
+        // Redraw tables when scale changes
+        if (extractedTables.length > 0) {
+            drawTablesOnPdf(extractedTables);
+        }
+    });
 }); 

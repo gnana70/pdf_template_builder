@@ -20,6 +20,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const extractedTextInput = document.getElementById('extracted-text-input');
     const ocrRequiredInput = document.getElementById('ocr-required');
     const loadingStatus = document.getElementById('loading-status');
+    const isTableField = document.getElementById('is-table-field');
+    const tableControls = document.getElementById('table-controls');
+    
+    // Track if a selection was made
+    let userMadeSelection = false;
+    
+    // Variable to track table field saving
+    let savingTableField = false;
     
     // Edit field buttons
     document.addEventListener('click', (e) => {
@@ -38,6 +46,209 @@ document.addEventListener('DOMContentLoaded', function() {
             deleteField(fieldId);
         }
     });
+    
+    // Check if this is a table field and update the save button
+    if (isTableField) {
+        // Original save button text
+        const originalSaveText = saveFieldBtn.textContent || "Save Field";
+        
+        isTableField.addEventListener('change', function() {
+            if (this.checked) {
+                // Auto-fill with page dimensions always when the checkbox is checked
+                autoFillTableDimensions();
+                
+                // Update coordinate display if available
+                if (typeof updateCoordinateDisplay === 'function') {
+                    updateCoordinateDisplay();
+                }
+                
+                // Make sure the dimensions are visible
+                userMadeSelection = true;
+                
+                tableControls.classList.remove('hidden');
+                
+                // Update save button text for table fields
+                saveFieldBtn.textContent = "Save Table & Configure";
+                saveFieldBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            } else {
+                tableControls.classList.add('hidden');
+                
+                // Restore original save button text
+                saveFieldBtn.textContent = originalSaveText;
+                saveFieldBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            }
+        });
+    }
+    
+    // Listen for changes in the field name dropdown
+    if (fieldNameInput) {
+        fieldNameInput.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const selectedText = selectedOption ? selectedOption.textContent : '';
+            
+            console.log(`Field selected: "${selectedText}"`);
+            
+            // Check if the selected field is a table field based on field type attribute
+            const isTableField = selectedOption && (
+                selectedOption.dataset.fieldType === 'table' || 
+                selectedOption.textContent.toLowerCase().includes('table')
+            );
+            
+            console.log(`Is this a table field? ${isTableField ? 'YES' : 'NO'}`);
+            
+            // If it's a table field, check the table checkbox and auto-fill dimensions
+            if (isTableField && window.isTableField) {
+                console.log("TABLE FIELD SELECTED: Auto-filling dimensions based on current page");
+                
+                // Check the table field checkbox
+                window.isTableField.checked = true;
+                console.log("Table checkbox checked automatically");
+                
+                // Make the table controls visible
+                if (tableControls) {
+                    tableControls.classList.remove('hidden');
+                    console.log("Table controls are now visible");
+                }
+                
+                // Update save button text if needed
+                if (saveFieldBtn) {
+                    saveFieldBtn.textContent = "Save Table & Configure";
+                    saveFieldBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    console.log("Save button updated for table configuration");
+                }
+                
+                // Make sure dimensions are visible
+                userMadeSelection = true;
+                
+                // Auto-fill the table dimensions based on the current page
+                autoFillTableDimensions();
+                
+                // Small delay to ensure values are set
+                setTimeout(() => {
+                    // Update coordinate display if available
+                    if (typeof updateCoordinateDisplay === 'function') {
+                        updateCoordinateDisplay();
+                    }
+                    console.log("Table coordinates updated and displayed");
+                }, 50);
+            }
+        });
+    }
+    
+    // Function to auto-fill table dimensions with page dimensions
+    function autoFillTableDimensions() {
+        // Make sure page field is set to current page
+        if (window.currentPage && fieldPageInput) {
+            fieldPageInput.value = window.currentPage;
+        } else if (fieldPageInput) {
+            // Default to page 1 if no current page
+            fieldPageInput.value = 1;
+        }
+        
+        // First check if we can get dimensions directly from current page viewport
+        let pageWidth, pageHeight;
+        
+        try {
+            // Try to get the dimensions from the current page canvas for the most accurate dimensions
+            const currentPageCanvas = document.querySelector(`#page-${window.currentPage} canvas`);
+            if (currentPageCanvas) {
+                // Get unscaled dimensions (divide by scale)
+                pageWidth = currentPageCanvas.width / window.scale;
+                pageHeight = currentPageCanvas.height / window.scale;
+                console.log(`Got dimensions from canvas: ${pageWidth}x${pageHeight}`);
+            } 
+            // If canvas not available, use global variables set by updatePageDimensions
+            else if (window.pageWidth && window.pageHeight) {
+                pageWidth = window.pageWidth;
+                pageHeight = window.pageHeight;
+                console.log(`Got dimensions from global variables: ${pageWidth}x${pageHeight}`);
+            } 
+            // Fallback to default letter dimensions
+            else {
+                pageWidth = 612; // Default letter width in points
+                pageHeight = 792; // Default letter height in points
+                console.log(`Using default letter dimensions: ${pageWidth}x${pageHeight}`);
+            }
+            
+            // Set field inputs to page dimensions
+            fieldXInput.value = 0;
+            fieldYInput.value = 0;
+            fieldX1Input.value = pageWidth;
+            fieldY1Input.value = pageHeight;
+            
+            // Trigger the change event manually so any listeners are notified
+            const changeEvent = new Event('change', { bubbles: true });
+            fieldXInput.dispatchEvent(changeEvent);
+            fieldYInput.dispatchEvent(changeEvent);
+            fieldX1Input.dispatchEvent(changeEvent);
+            fieldY1Input.dispatchEvent(changeEvent);
+            
+            console.log(`Auto-filled table dimensions: ${pageWidth}x${pageHeight}`);
+            
+            // Update the coordinate display if available
+            if (typeof updateCoordinateDisplay === 'function') {
+                updateCoordinateDisplay();
+            }
+        } catch (error) {
+            console.error("Error setting table dimensions:", error);
+            // Fallback to defaults as a last resort
+            fieldXInput.value = 0;
+            fieldYInput.value = 0;
+            fieldX1Input.value = 612;
+            fieldY1Input.value = 792;
+            
+            // Trigger change events here too
+            const changeEvent = new Event('change', { bubbles: true });
+            fieldXInput.dispatchEvent(changeEvent);
+            fieldYInput.dispatchEvent(changeEvent);
+            fieldX1Input.dispatchEvent(changeEvent);
+            fieldY1Input.dispatchEvent(changeEvent);
+        }
+    }
+    
+    // Add event listener for page selection changes to update table dimensions
+    if (fieldPageInput) {
+        fieldPageInput.addEventListener('change', function() {
+            // If table field is checked, auto-update dimensions based on new page
+            if (isTableField && isTableField.checked) {
+                // Set current page to match the selected page
+                if (window.currentPage !== parseInt(this.value) && typeof renderPage === 'function') {
+                    // This will render the selected page and update pageWidth/pageHeight
+                    renderPage(parseInt(this.value)).then(() => {
+                        // After page render, update dimensions
+                        autoFillTableDimensions();
+                    });
+                } else {
+                    // Page already selected, just update dimensions
+                    autoFillTableDimensions();
+                }
+            }
+        });
+    }
+    
+    // Function to update coordinate display
+    function updateCoordinateDisplay() {
+        const displayX = document.getElementById('display-x');
+        const displayY = document.getElementById('display-y');
+        const displayWidth = document.getElementById('display-width');
+        const displayHeight = document.getElementById('display-height');
+        
+        if (displayX && displayY && displayWidth && displayHeight) {
+            displayX.textContent = parseFloat(fieldXInput.value || 0).toFixed(2);
+            displayY.textContent = parseFloat(fieldYInput.value || 0).toFixed(2);
+            displayWidth.textContent = parseFloat(fieldX1Input.value || 0).toFixed(2);
+            displayHeight.textContent = parseFloat(fieldY1Input.value || 0).toFixed(2);
+        }
+    }
+    
+    // Add listeners for coordinate changes
+    if (fieldXInput) fieldXInput.addEventListener('input', updateCoordinateDisplay);
+    if (fieldYInput) fieldYInput.addEventListener('input', updateCoordinateDisplay);
+    if (fieldX1Input) fieldX1Input.addEventListener('input', updateCoordinateDisplay);
+    if (fieldY1Input) fieldY1Input.addEventListener('input', updateCoordinateDisplay);
+    
+    // Initial update
+    updateCoordinateDisplay();
     
     // Edit field function
     const editField = async (fieldId) => {

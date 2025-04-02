@@ -91,6 +91,13 @@ class TemplateForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
+        # Make configuration optional
+        self.fields['configuration'].required = False
+        
+        # Make unnecessary_page fields optional since they're legacy fields
+        self.fields['unnecessary_page_delta'].required = False
+        self.fields['unnecessary_page_position'].required = False
+        
         if user:
             # Filter configurations by user and active status
             self.fields['configuration'].queryset = Configuration.objects.filter(

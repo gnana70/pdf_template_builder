@@ -16,6 +16,7 @@ import tempfile
 from django.core.paginator import Paginator
 from django.db.models import Q
 import logging
+from django.db import transaction
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -60,49 +61,149 @@ def template_list(request):
 
 @login_required
 def template_create(request):
+    # Direct print message that will appear in the console no matter what
+    print("\n\nTEMPLATE CREATE VIEW CALLED - DIRECT PRINT\n\n")
+    
     if request.method == 'POST':
+        # Add a very visible console log message for testing
+        logger.info("="*50)
+        logger.info("TEMPLATE CREATE REQUEST RECEIVED")
+        logger.info("="*50)
+        
+        # Print the form data for debugging
+        print("\nFORM DATA:")
+        for key, value in request.POST.items():
+            print(f"{key}: {value}")
+        print("\nFILES:")
+        for key, value in request.FILES.items():
+            print(f"{key}: {value}")
+        
         form = TemplateForm(request.POST, request.FILES, user=request.user)
-        if form.is_valid():
-            template = form.save(commit=False)
-            template.created_by = request.user
-            template.save()
+        print(f"\nFORM IS BOUND: {form.is_bound}")
+        
+        # Check if form is valid and print errors if not
+        form_valid = form.is_valid()
+        print(f"FORM IS VALID: {form_valid}")
+        
+        if not form_valid:
+            print("FORM ERRORS:")
+            for field, errors in form.errors.items():
+                print(f"  {field}: {errors}")
+                # Check specifically for duplicate name error and make it more visible
+                if field == 'name' and 'unique' in str(errors).lower():
+                    error_msg = f"A template with the name '{form.data.get('name')}' already exists. Please use a different name."
+                    print(f"DUPLICATE NAME ERROR: {error_msg}")
+                    messages.error(request, error_msg)
             
-            # Handle page positions if provided
-            if 'page_positions_json' in request.POST:
-                try:
-                    page_positions_data = json.loads(request.POST.get('page_positions_json'))
+            # Return the form with visible errors
+            configurations = Configuration.objects.filter(created_by=request.user, status='active')
+            return render(request, 'templates/form.html', {'form': form, 'configurations': configurations})
+        
+        if form_valid:
+            try:
+                print("ATTEMPTING TO SAVE TEMPLATE")
+                # Use transaction.atomic to ensure all operations are completed or none
+                with transaction.atomic():
+                    # Create and save the template
+                    template = form.save(commit=False)
+                    template.created_by = request.user
                     
-                    # If at least one position exists, update the legacy fields with the first one
-                    # for backward compatibility
-                    if page_positions_data:
-                        first_position = page_positions_data[0]
-                        position = first_position.get('position')
-                        if position in ['first', 'last']:
-                            template.unnecessary_page_position = position
-                            template.unnecessary_page_delta = first_position.get('delta', 0)
-                            template.save(update_fields=['unnecessary_page_position', 'unnecessary_page_delta'])
+                    # Ensure dimensions are saved as integers
+                    if 'first_page_width' in request.POST and request.POST['first_page_width']:
+                        try:
+                            template.first_page_width = int(float(request.POST['first_page_width']))
+                            print(f"Setting width to: {template.first_page_width}")
+                        except (ValueError, TypeError):
+                            print(f"Error converting width: {request.POST['first_page_width']}")
                     
-                    # Create all positions
-                    for pos_data in page_positions_data:
-                        position = pos_data.get('position')
-                        delta = pos_data.get('delta')
-                        page_number = pos_data.get('page_number')
+                    if 'first_page_height' in request.POST and request.POST['first_page_height']:
+                        try:
+                            template.first_page_height = int(float(request.POST['first_page_height']))
+                            print(f"Setting height to: {template.first_page_height}")
+                        except (ValueError, TypeError):
+                            print(f"Error converting height: {request.POST['first_page_height']}")
+                    
+                    print(f"SAVING TEMPLATE: {template.name} with dimensions: {template.first_page_width}x{template.first_page_height}")
+                    template.save()
+                    print(f"TEMPLATE SAVED WITH ID: {template.pk}")
+                    
+                    # Log template creation with ID and details - with visible markers
+                    logger.info("="*30 + " TEMPLATE CREATED SUCCESSFULLY " + "="*30)
+                    logger.info(f"Template ID: {template.pk}")
+                    logger.info(f"Template Name: {template.name}")
+                    logger.info(f"Created By: {request.user.username}")
+                    logger.info(f"Configuration: {template.configuration.name if template.configuration else 'None'}")
+                    logger.info(f"Dimensions: {template.first_page_width}x{template.first_page_height}")
+                    logger.info("="*85)
+                    
+                    # Handle page positions if provided
+                    if 'page_positions_json' in request.POST:
+                        print(f"PROCESSING PAGE POSITIONS: {request.POST.get('page_positions_json')}")
+                        try:
+                            page_positions_data = json.loads(request.POST.get('page_positions_json'))
+                            
+                            # If at least one position exists, update the legacy fields with the first one
+                            # for backward compatibility
+                            if page_positions_data:
+                                first_position = page_positions_data[0]
+                                position = first_position.get('position')
+                                if position in ['first', 'last']:
+                                    template.unnecessary_page_position = position
+                                    template.unnecessary_page_delta = first_position.get('delta', 0)
+                                    template.save(update_fields=['unnecessary_page_position', 'unnecessary_page_delta'])
+                                    
+                                    logger.info(f"Template {template.pk} updated with legacy page position: {position}, delta: {template.unnecessary_page_delta}")
+                            
+                            # Create all positions
+                            created_positions = []
+                            for pos_data in page_positions_data:
+                                position = pos_data.get('position')
+                                delta = pos_data.get('delta')
+                                page_number = pos_data.get('page_number')
+                                
+                                # Create page position
+                                page_position = TemplatePagePosition.objects.create(
+                                    template=template,
+                                    position=position,
+                                    delta=delta,
+                                    page_number=page_number if position == 'custom' else None
+                                )
+                                created_positions.append(f"Position {page_position.pk}: {position}, delta: {delta}, page: {page_number}")
+                            
+                            if created_positions:
+                                logger.info(f"Created {len(created_positions)} page positions for template {template.pk}: {', '.join(created_positions)}")
+                        except json.JSONDecodeError:
+                            logger.warning(f"Could not parse page positions data for template {template.pk}")
+                            messages.warning(request, "Could not parse page positions data")
+                        except Exception as e:
+                            logger.error(f"Error saving page positions for template {template.pk}: {str(e)}")
+                            messages.warning(request, f"Error saving page positions: {str(e)}")
+                    
+                    # Make sure messages are visible to the user
+                    messages.success(request, f"Template '{template.name}' created successfully with ID: {template.pk}")
+                    
+                    # Get the action from the form
+                    action = request.POST.get('action')
+                    print(f"ACTION BUTTON: {action}")
+                    
+                    # Add debug logging before redirect
+                    if action == 'save_configure':
+                        print(f"ABOUT TO REDIRECT TO CONFIGURE PAGE FOR TEMPLATE {template.pk}")
+                        logger.info(f"Redirecting to configure page for template {template.pk}")
+                        return redirect('template_configure', pk=template.pk)
+                    else:
+                        print(f"ABOUT TO REDIRECT TO UPDATE PAGE FOR TEMPLATE {template.pk}")
+                        logger.info(f"Redirecting to update page for template {template.pk}")
+                        return redirect('template_update', pk=template.pk)
                         
-                        # Create page position
-                        TemplatePagePosition.objects.create(
-                            template=template,
-                            position=position,
-                            delta=delta,
-                            page_number=page_number if position == 'custom' else None
-                        )
-                except json.JSONDecodeError:
-                    messages.warning(request, "Could not parse page positions data")
-                except Exception as e:
-                    logger.error(f"Error saving page positions: {str(e)}")
-                    messages.warning(request, f"Error saving page positions: {str(e)}")
-            
-            messages.success(request, "Template created successfully!")
-            return redirect('template_configure', pk=template.pk)
+            except Exception as e:
+                # Log the error and display a message
+                print(f"ERROR CREATING TEMPLATE: {str(e)}")
+                logger.error(f"Error creating template: {str(e)}")
+                messages.error(request, f"Error creating template: {str(e)}")
+                # Return the form with errors
+                configurations = Configuration.objects.filter(created_by=request.user, status='active')
+                return render(request, 'templates/form.html', {'form': form, 'configurations': configurations, 'error': str(e)})
     else:
         form = TemplateForm(user=request.user)
 
@@ -116,62 +217,117 @@ def template_update(request, pk):
     if request.method == 'POST':
         form = TemplateForm(request.POST, request.FILES, instance=template, user=request.user)
         if form.is_valid():
-            form.save()
-            
-            # Handle page positions if provided
-            if 'page_positions_json' in request.POST:
-                try:
-                    # Remove existing page positions
-                    template.page_positions.all().delete()
-                    
-                    # Add new page positions
-                    page_positions_data = json.loads(request.POST.get('page_positions_json'))
-                    
-                    # If at least one position exists, update the legacy fields with the first one
-                    # for backward compatibility
-                    if page_positions_data:
-                        first_position = page_positions_data[0]
-                        position = first_position.get('position')
-                        if position in ['first', 'last']:
-                            template.unnecessary_page_position = position
-                            template.unnecessary_page_delta = first_position.get('delta', 0)
-                            template.save(update_fields=['unnecessary_page_position', 'unnecessary_page_delta'])
-                    else:
-                        # If no positions, clear the legacy fields
-                        template.unnecessary_page_position = None
-                        template.unnecessary_page_delta = 0
-                        template.save(update_fields=['unnecessary_page_position', 'unnecessary_page_delta'])
-                    
-                    for pos_data in page_positions_data:
-                        position = pos_data.get('position')
-                        delta = pos_data.get('delta')
-                        page_number = pos_data.get('page_number')
+            try:
+                # Save the main template data, but commit=False to handle dimensions
+                template = form.save(commit=False)
+                
+                # Ensure dimensions are saved as integers
+                if 'first_page_width' in request.POST and request.POST['first_page_width']:
+                    try:
+                        template.first_page_width = int(float(request.POST['first_page_width']))
+                        print(f"Updating width to: {template.first_page_width}")
+                    except (ValueError, TypeError):
+                        print(f"Error converting width: {request.POST['first_page_width']}")
+                
+                if 'first_page_height' in request.POST and request.POST['first_page_height']:
+                    try:
+                        template.first_page_height = int(float(request.POST['first_page_height']))
+                        print(f"Updating height to: {template.first_page_height}")
+                    except (ValueError, TypeError):
+                        print(f"Error converting height: {request.POST['first_page_height']}")
+                
+                # Save the template with updated dimensions
+                template.save()
+                
+                # Log template update with ID and details
+                logger.info(f"Template updated successfully - ID: {template.pk}, Name: {template.name}, "
+                           f"User: {request.user.username}, Configuration: {template.configuration.name if template.configuration else 'None'}, "
+                           f"Dimensions: {template.first_page_width}x{template.first_page_height}")
+                
+                # Handle page positions if provided
+                if 'page_positions_json' in request.POST:
+                    try:
+                        # Remove existing page positions
+                        previous_position_count = template.page_positions.count()
+                        template.page_positions.all().delete()
+                        logger.info(f"Deleted {previous_position_count} previous page positions for template {template.pk}")
                         
-                        # Create page position
-                        TemplatePagePosition.objects.create(
-                            template=template,
-                            position=position,
-                            delta=delta,
-                            page_number=page_number if position == 'custom' else None
-                        )
-                except json.JSONDecodeError:
-                    messages.warning(request, "Could not parse page positions data")
-                except Exception as e:
-                    logger.error(f"Error saving page positions: {str(e)}")
-                    messages.warning(request, f"Error saving page positions: {str(e)}")
-            
-            messages.success(request, "Template updated successfully!")
-            return redirect('template_list')
+                        # Add new page positions
+                        page_positions_data = json.loads(request.POST.get('page_positions_json'))
+                        
+                        # If at least one position exists, update the legacy fields with the first one
+                        # for backward compatibility
+                        if page_positions_data:
+                            first_position = page_positions_data[0]
+                            position = first_position.get('position')
+                            if position in ['first', 'last']:
+                                template.unnecessary_page_position = position
+                                template.unnecessary_page_delta = first_position.get('delta', 0)
+                                template.save(update_fields=['unnecessary_page_position', 'unnecessary_page_delta'])
+                                logger.info(f"Template {template.pk} updated with legacy page position: {position}, delta: {template.unnecessary_page_delta}")
+                        else:
+                            # If no positions, clear the legacy fields
+                            template.unnecessary_page_position = None
+                            template.unnecessary_page_delta = 0
+                            template.save(update_fields=['unnecessary_page_position', 'unnecessary_page_delta'])
+                            logger.info(f"Cleared legacy page position fields for template {template.pk}")
+                        
+                        # Create all new positions
+                        created_positions = []
+                        for pos_data in page_positions_data:
+                            position = pos_data.get('position')
+                            delta = pos_data.get('delta')
+                            page_number = pos_data.get('page_number')
+                            
+                            # Create page position
+                            page_position = TemplatePagePosition.objects.create(
+                                template=template,
+                                position=position,
+                                delta=delta,
+                                page_number=page_number if position == 'custom' else None
+                            )
+                            created_positions.append(f"Position {page_position.pk}: {position}, delta: {delta}, page: {page_number}")
+                        
+                        if created_positions:
+                            logger.info(f"Created {len(created_positions)} new page positions for template {template.pk}: {', '.join(created_positions)}")
+                    except json.JSONDecodeError:
+                        logger.warning(f"Could not parse page positions data for template {template.pk}")
+                        messages.warning(request, "Could not parse page positions data")
+                    except Exception as e:
+                        logger.error(f"Error saving page positions for template {template.pk}: {str(e)}")
+                        messages.warning(request, f"Error saving page positions: {str(e)}")
+                
+                messages.success(request, "Template updated successfully!")
+                
+                # Get the action from the form
+                action = request.POST.get('action')
+                logger.info(f"Action button clicked: {action}")
+                
+                if action == 'save_configure':
+                    # Redirect to configure page
+                    return redirect('template_configure', pk=template.pk)
+                else:
+                    # Redirect to template update page
+                    return redirect('template_update', pk=template.pk)
+                    
+            except Exception as e:
+                # Log the error and display a message
+                logger.error(f"Error updating template {template.pk}: {str(e)}")
+                messages.error(request, f"Error updating template: {str(e)}")
+                # Return to the form with the error
+                configurations = Configuration.objects.filter(created_by=request.user, status='active')
+                return render(request, 'templates/form.html', {'form': form, 'template': template, 'configurations': configurations, 'error': str(e)})
     else:
         form = TemplateForm(instance=template, user=request.user)
         
         # If we have legacy data but no TemplatePagePosition entries, create them for backward compatibility
         if not template.page_positions.exists() and template.unnecessary_page_position:
-            TemplatePagePosition.objects.create(
+            position = TemplatePagePosition.objects.create(
                 template=template,
                 position=template.unnecessary_page_position,
                 delta=template.unnecessary_page_delta
             )
+            logger.info(f"Created legacy page position entry for template {template.pk}: Position {position.pk}: {position.position}, delta: {position.delta}")
     
     configurations = Configuration.objects.filter(created_by=request.user, status='active')
     return render(request, 'templates/form.html', {'form': form, 'template': template, 'configurations': configurations})
@@ -220,7 +376,15 @@ def template_field_create(request, template_pk):
             field.extracted_text = form.cleaned_data.get('extracted_text', '')
             field.ocr_required = form.cleaned_data.get('ocr_required', False)
             
+            # Save the field
             field.save()
+            
+            # Log field creation details
+            field_type = "Table" if field.is_table else "Standard"
+            logger.info(f"Created {field_type} field for template {template.pk} - Field ID: {field.pk}, Name: {field.name}, "
+                       f"Position: ({field.x}, {field.y}), Size: {field.x1}x{field.y1}, Page: {field.page}, "
+                       f"OCR Required: {field.ocr_required}")
+            
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'success', 'field_id': field.id})
             messages.success(request, "Field added successfully!")
@@ -252,9 +416,17 @@ def template_field_update(request, pk):
             field.extracted_text = form.cleaned_data.get('extracted_text', '')
             field.ocr_required = form.cleaned_data.get('ocr_required', False)
             
+            # Save the field updates
             field.save()
+            
+            # Log field update details
+            field_type = "Table" if field.is_table else "Standard"
+            logger.info(f"Updated {field_type} field for template {field.template.pk} - Field ID: {field.pk}, Name: {field.name}, "
+                       f"Position: ({field.x}, {field.y}), Size: {field.x1}x{field.y1}, Page: {field.page}, "
+                       f"OCR Required: {field.ocr_required}")
+            
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'success'})
+                return JsonResponse({'status': 'success', 'field_id': field.id})
             messages.success(request, "Field updated successfully!")
             return redirect('template_configure', pk=field.template.pk)
     else:
@@ -266,9 +438,16 @@ def template_field_update(request, pk):
 def template_field_delete(request, pk):
     field = get_object_or_404(TemplateField, pk=pk, template__created_by=request.user)
     template_pk = field.template.pk
+    template_name = field.template.name
+    field_name = field.name
+    field_id = field.pk
     
     if request.method == 'POST':
         field.delete()
+        
+        # Log field deletion
+        logger.info(f"Deleted field ID: {field_id}, Name: {field_name} from template {template_pk} ({template_name})")
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'status': 'success'})
         messages.success(request, "Field deleted successfully!")
@@ -421,7 +600,7 @@ def extract_tables_api(request, pk):
             # Now find tables on the temporary page with the drawn lines
             tables_finder = temp_page.find_tables(
                 clip=clip, 
-                strategy=settings.get('strategy', 'lines'),
+                strategy=settings.get('strategy', 'lines_strict'),
                 horizontal_strategy=settings.get('horizontal_strategy', 'lines_strict'),
                 vertical_strategy=settings.get('vertical_strategy', 'lines_strict'),
                 snap_tolerance=settings.get('snap_tolerance', 3),
@@ -449,7 +628,7 @@ def extract_tables_api(request, pk):
             # Standard find_tables call without external_lines
             tables_finder = page.find_tables(
                 clip=clip, 
-                strategy=settings.get('strategy', 'lines'),
+                strategy=settings.get('strategy', 'lines_strict'),
                 horizontal_strategy=settings.get('horizontal_strategy', 'lines_strict'),
                 vertical_strategy=settings.get('vertical_strategy', 'lines_strict'),
                 snap_tolerance=settings.get('snap_tolerance', 3),
@@ -473,62 +652,81 @@ def extract_tables_api(request, pk):
         # Convert tables to a serializable format
         tables_data = []
         for table in tables_finder:
-            # Extract table content from the original page using the table's bbox
-            # Get the same area from the original page
-            table_rect = fitz.Rect(table.bbox)
+            # Use the built-in extract method to get table content directly
+            try:
+                table_content = table.extract()
+            except Exception as extract_error:
+                print(f"Error extracting table content: {extract_error}")
+                table_content = []
             
-            # Extract using the original content for better text accuracy
-            words = original_page.get_text("words", clip=table_rect)
+            # Inspect all attributes of the table object
+            print("Available table attributes:", [attr for attr in dir(table) if not attr.startswith('__')])
             
-            # Organize words into rows and columns based on their positions
-            table_content = []
-            if words:
-                # Sort words by their y-coordinate (to group by rows)
-                words.sort(key=lambda w: w[3])  # Sort by y1 coordinate
-                
-                # Simple row detection (group words with similar y-coordinates)
-                y_tolerance = 5  # pixels tolerance for same row
-                current_y = words[0][3]
-                current_row = []
-                rows = []
-                
-                for word in words:
-                    if abs(word[3] - current_y) > y_tolerance:
-                        # New row detected
-                        if current_row:
-                            # Sort words in the row by x-coordinate
-                            current_row.sort(key=lambda w: w[0])
-                            rows.append(current_row)
-                        current_row = [word]
-                        current_y = word[3]
-                    else:
-                        current_row.append(word)
-                
-                # Don't forget the last row
-                if current_row:
-                    current_row.sort(key=lambda w: w[0])
-                    rows.append(current_row)
-                
-                # Convert rows to text
-                for row in rows:
-                    row_text = [word[4] for word in row]
-                    table_content.append(row_text)
-            
-            # If table_content is empty or couldn't be properly extracted,
-            # fall back to the table's extract method
-            if not table_content:
-                try:
-                    table_content = table.extract()
-                except Exception as extract_error:
-                    print(f"Error extracting table content: {extract_error}")
-                    table_content = []
+            # Try to get additional potential attributes that might help with drawing
+            for attr_name in ['rect', 'horizontal_lines', 'vertical_lines', 'grid_lines', 'borders', 'columns', 'spans']:
+                if hasattr(table, attr_name):
+                    attr_value = getattr(table, attr_name)
+                    print(f"Table.{attr_name}:", attr_value)
+                    
+            print("table bbox: ", table.bbox)
             
             # Add table information
+            if hasattr(table, 'rows'):
+                print(f"Table has {len(table.rows)} TableRow objects")
+                if len(table.rows) > 0:
+                    first_row = table.rows[0]
+                    print("First row bbox:", first_row.bbox if hasattr(first_row, 'bbox') else "No bbox")
+                    print("First row cells:", len(first_row.cells) if hasattr(first_row, 'cells') else "No cells")
+                    
+                    if hasattr(first_row, 'cells') and len(first_row.cells) > 0:
+                        first_cell = first_row.cells[0]
+                        print("First cell in first row bbox:", first_cell.bbox if hasattr(first_cell, 'bbox') else "No bbox")
+            else:
+                print("Table has no TableRow objects")
+                
+            # Check for rows_positions and cols_positions
+            if hasattr(table, 'rows_positions'):
+                print("rows_positions:", table.rows_positions)
+            else:
+                print("No rows_positions attribute")
+                
+            if hasattr(table, 'cols_positions'):
+                print("cols_positions:", table.cols_positions)
+            else:
+                print("No cols_positions attribute")
+                
+            # Check for cells array
+            if hasattr(table, 'cells'):
+                print(f"Table has cells array with {len(table.cells)} rows")
+                if len(table.cells) > 0:
+                    print(f"First row of cells has {len(table.cells[0]) if len(table.cells) > 0 and hasattr(table.cells[0], '__len__') else 'unknown'} cells")
+            else:
+                print("No cells array found")
+            
             tables_data.append({
                 'bbox': list(table.bbox),  # Convert tuple to list for JSON serialization
                 'rows': table_content,
-                'row_count': len(table_content),
-                'col_count': len(table_content[0]) if table_content and len(table_content) > 0 else 0
+                'row_count': table.row_count,
+                'col_count': table.col_count,
+                'has_header': table.header.external if hasattr(table.header, 'external') else False,
+                'rows_positions': table.rows_positions if hasattr(table, 'rows_positions') else None,
+                'cols_positions': table.cols_positions if hasattr(table, 'cols_positions') else None,
+                'cells': [[{'bbox': list(cell.bbox) if hasattr(cell, 'bbox') and cell.bbox else None} 
+                          for cell in row if hasattr(cell, '__iter__')] 
+                          for row in table.cells] if hasattr(table, 'cells') else None,
+                # Include TableRow objects info from table.rows property with detailed cell information
+                'table_rows': [
+                    {
+                        'bbox': list(row.bbox) if hasattr(row, 'bbox') and row.bbox else None,
+                        'cells': [
+                            {
+                                'bbox': list(cell) if cell is not None else []
+                            } 
+                            for cell in row.cells
+                        ] if hasattr(row, 'cells') else []
+                    } 
+                    for row in table.rows
+                ] if hasattr(table, 'rows') else None
             })
         
         print(f"Found {len(tables_data)} tables")
@@ -676,6 +874,7 @@ def save_template_image(request, template_pk):
         required_fields = ['image_data', 'name', 'page', 'format', 'width', 'height']
         for field in required_fields:
             if field not in data:
+                logger.warning(f"Missing required field '{field}' when saving image for template {template_pk}")
                 return JsonResponse({'error': f'Missing required field: {field}'}, status=400)
         
         # Check if an image with this name already exists for this template
@@ -690,6 +889,11 @@ def save_template_image(request, template_pk):
             existing_image.is_logo = data.get('is_logo', False)
             existing_image.is_signature = data.get('is_signature', False)
             existing_image.save()
+            
+            image_type = "logo" if existing_image.is_logo else "signature" if existing_image.is_signature else "standard"
+            logger.info(f"Updated {image_type} image for template {template_pk} - Image ID: {existing_image.id}, "
+                       f"Name: {existing_image.name}, Page: {existing_image.page}, "
+                       f"Size: {existing_image.width}x{existing_image.height}")
             
             return JsonResponse({
                 'success': True,
@@ -711,6 +915,11 @@ def save_template_image(request, template_pk):
             )
             new_image.save()
             
+            image_type = "logo" if new_image.is_logo else "signature" if new_image.is_signature else "standard"
+            logger.info(f"Created new {image_type} image for template {template_pk} - Image ID: {new_image.id}, "
+                       f"Name: {new_image.name}, Page: {new_image.page}, "
+                       f"Size: {new_image.width}x{new_image.height}")
+            
             return JsonResponse({
                 'success': True,
                 'message': 'Image saved successfully',
@@ -718,8 +927,10 @@ def save_template_image(request, template_pk):
             })
             
     except json.JSONDecodeError:
+        logger.warning(f"Invalid JSON received when saving image for template {template_pk}")
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
+        logger.error(f"Error saving image for template {template_pk}: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
@@ -751,19 +962,29 @@ def get_template_images(request, template_pk):
 
 @login_required
 def delete_template_image(request, template_pk, image_id):
-    """Delete a template image"""
+    """Delete a saved image"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
     
     template = get_object_or_404(Template, pk=template_pk, created_by=request.user)
     image = get_object_or_404(TemplateImage, pk=image_id, template=template)
     
-    image.delete()
-    
-    return JsonResponse({
-        'success': True,
-        'message': 'Image deleted successfully'
-    })
+    try:
+        image_name = image.name
+        image_id = image.id
+        image_type = "logo" if image.is_logo else "signature" if image.is_signature else "standard"
+        
+        image.delete()
+        
+        logger.info(f"Deleted {image_type} image from template {template_pk} - Image ID: {image_id}, Name: {image_name}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Image deleted successfully',
+        })
+    except Exception as e:
+        logger.error(f"Error deleting image {image_id} from template {template_pk}: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
 def get_configuration_data(request, template_pk):
@@ -807,85 +1028,114 @@ def template_dimensions(request, pk):
 
 @login_required
 def template_page_position_api(request, template_pk, position_id=None):
-    """API endpoint to handle CRUD operations for page positions"""
+    """API for template page positions"""
     template = get_object_or_404(Template, pk=template_pk, created_by=request.user)
     
-    if request.method == 'POST':
-        # Create or update a page position
+    # Create a new position
+    if request.method == 'POST' and position_id == 'new':
         try:
             data = json.loads(request.body)
             position = data.get('position')
             delta = data.get('delta', 0)
-            page_number = data.get('page_number') if position == 'custom' else None
+            page_number = data.get('page_number')
             
-            if position_id and position_id != 'new':
-                # Update existing position
-                pos = get_object_or_404(TemplatePagePosition, pk=position_id, template=template)
-                pos.position = position
-                pos.delta = delta
-                pos.page_number = page_number
-                pos.save()
-                message = 'Position updated successfully'
-            else:
-                # Create new position
-                pos = TemplatePagePosition.objects.create(
-                    template=template,
-                    position=position,
-                    delta=delta,
-                    page_number=page_number
-                )
-                message = 'Position added successfully'
+            if position not in ['first', 'last', 'custom']:
+                logger.warning(f"Invalid position value '{position}' for template {template_pk}")
+                return JsonResponse({'error': 'Invalid position value'}, status=400)
             
-            # If this is the first position or updating first position, update legacy fields
-            if (position in ['first', 'last'] and 
-                    (template.page_positions.count() == 1 or 
-                     (position_id and template.page_positions.first().id == pos.id))):
-                template.unnecessary_page_position = position
-                template.unnecessary_page_delta = delta
-                template.save(update_fields=['unnecessary_page_position', 'unnecessary_page_delta'])
+            if position == 'custom' and not page_number:
+                logger.warning(f"Missing page number for custom position for template {template_pk}")
+                return JsonResponse({'error': 'Page number is required for custom positions'}, status=400)
+            
+            page_position = TemplatePagePosition.objects.create(
+                template=template,
+                position=position,
+                delta=delta,
+                page_number=page_number if position == 'custom' else None
+            )
+            
+            logger.info(f"Created page position for template {template_pk} - "
+                      f"Position ID: {page_position.id}, Type: {position}, "
+                      f"Delta: {delta}" + (f", Page: {page_number}" if position == 'custom' else ""))
             
             return JsonResponse({
-                'status': 'success',
-                'message': message,
-                'position': {
-                    'id': pos.id,
-                    'position': pos.position,
-                    'delta': pos.delta,
-                    'page_number': pos.page_number
-                }
+                'id': page_position.id,
+                'message': 'Position created successfully'
             })
         except json.JSONDecodeError:
-            return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+            logger.warning(f"Invalid JSON for new page position for template {template_pk}")
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
         except Exception as e:
-            logger.error(f"Error saving position: {str(e)}")
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            logger.error(f"Error creating page position for template {template_pk}: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
     
-    elif request.method == 'DELETE' and position_id:
-        # Delete a position
+    # Update an existing position
+    elif request.method == 'POST' and position_id:
         try:
-            pos = get_object_or_404(TemplatePagePosition, pk=position_id, template=template)
-            pos.delete()
+            page_position = get_object_or_404(TemplatePagePosition, pk=position_id, template=template)
+            data = json.loads(request.body)
             
-            # If this was the position being used for legacy fields, update them
-            # to use the next available position
-            if template.page_positions.exists():
-                next_pos = template.page_positions.first()
-                if next_pos.position in ['first', 'last']:
-                    template.unnecessary_page_position = next_pos.position
-                    template.unnecessary_page_delta = next_pos.delta
-                    template.save(update_fields=['unnecessary_page_position', 'unnecessary_page_delta'])
+            # Store old values for logging
+            old_position = page_position.position
+            old_delta = page_position.delta
+            old_page = page_position.page_number
+            
+            # Update fields
+            page_position.position = data.get('position', page_position.position)
+            page_position.delta = data.get('delta', page_position.delta)
+            
+            if page_position.position == 'custom':
+                page_position.page_number = data.get('page_number')
+                if not page_position.page_number:
+                    logger.warning(f"Missing page number for custom position update for template {template_pk}")
+                    return JsonResponse({'error': 'Page number is required for custom positions'}, status=400)
             else:
-                # No more positions left, clear legacy fields
-                template.unnecessary_page_position = None
-                template.unnecessary_page_delta = 0
-                template.save(update_fields=['unnecessary_page_position', 'unnecessary_page_delta'])
+                page_position.page_number = None
+            
+            page_position.save()
+            
+            logger.info(f"Updated page position {position_id} for template {template_pk} - "
+                      f"Position changed: {old_position} → {page_position.position}, "
+                      f"Delta changed: {old_delta} → {page_position.delta}" + 
+                      (f", Page changed: {old_page} → {page_position.page_number}" 
+                       if page_position.position == 'custom' or old_position == 'custom' else ""))
             
             return JsonResponse({
-                'status': 'success',
+                'id': page_position.id,
+                'message': 'Position updated successfully'
+            })
+        except TemplatePagePosition.DoesNotExist:
+            logger.warning(f"Page position {position_id} not found for template {template_pk}")
+            return JsonResponse({'error': 'Position not found'}, status=404)
+        except json.JSONDecodeError:
+            logger.warning(f"Invalid JSON for updating page position {position_id} for template {template_pk}")
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            logger.error(f"Error updating page position {position_id} for template {template_pk}: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    # Delete a position
+    elif request.method == 'DELETE' and position_id:
+        try:
+            page_position = get_object_or_404(TemplatePagePosition, pk=position_id, template=template)
+            position_type = page_position.position
+            delta = page_position.delta
+            page = page_position.page_number
+            
+            page_position.delete()
+            
+            logger.info(f"Deleted page position {position_id} from template {template_pk} - "
+                      f"Type: {position_type}, Delta: {delta}" + 
+                      (f", Page: {page}" if position_type == 'custom' else ""))
+            
+            return JsonResponse({
                 'message': 'Position deleted successfully'
             })
+        except TemplatePagePosition.DoesNotExist:
+            logger.warning(f"Page position {position_id} not found for template {template_pk} during deletion")
+            return JsonResponse({'error': 'Position not found'}, status=404)
         except Exception as e:
-            logger.error(f"Error deleting position: {str(e)}")
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            logger.error(f"Error deleting page position {position_id} for template {template_pk}: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
     
-    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)  
+    return JsonResponse({'error': 'Invalid request method'}, status=405)  

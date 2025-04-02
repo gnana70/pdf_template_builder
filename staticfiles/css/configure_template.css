@@ -258,14 +258,14 @@ header nav .hidden.sm\:flex.sm\:items-center {
     position: absolute;
     background-color: rgba(79, 70, 229, 0.8);
     width: 2px;
-    z-index: 100;
+    z-index: 15; /* Changed from 100 to 15 to be below modal z-index of 20 */
 }
 
 .horizontal-line {
     position: absolute;
     background-color: rgba(79, 70, 229, 0.8);
     height: 2px;
-    z-index: 100;
+    z-index: 15; /* Changed from 100 to 15 to be below modal z-index of 20 */
 }
 
 /* Custom scrollbar for fields section */

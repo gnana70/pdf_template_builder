@@ -74,26 +74,29 @@ document.addEventListener('DOMContentLoaded', function() {
         python_functions: []
     };
     
-    // When first page is rendered, capture dimensions
+    // Update page dimensions in the database
     const updatePageDimensions = async (page) => {
-        if (page && page.pageNumber === 1) {
+        const viewport = page.getViewport({ scale: 1.0 });
+        const width = viewport.width;
+        const height = viewport.height;
+        
+        // Store dimensions globally for use by other scripts
+        window.pageWidth = width;
+        window.pageHeight = height;
+        
+        if (pageDimensionsEl) {
+            pageDimensionsEl.textContent = `${Math.round(width)} × ${Math.round(height)}`;
+        }
+        
+        // Update database with dimensions for first page only
+        if (page.pageNumber === 1) {
             try {
-                const viewport = page.getViewport({ scale: 1.0 });
-                const width = viewport.width;
-                const height = viewport.height;
-                
-                // Display dimensions in dedicated element
-                const dimensionsEl = document.getElementById('page-dimensions');
-                if (dimensionsEl) {
-                    dimensionsEl.textContent = `Page dimensions: ${width.toFixed(2)}×${height.toFixed(2)} pts`;
-                }
-                
-                // Save dimensions to the template
+                // Get template ID from URL
                 const pathParts = window.location.pathname.split('/').filter(Boolean);
                 const templateId = pathParts[pathParts.length - 2];
                 
-                // Only save if dimensions are not already set
-                const response = await fetch(`/templates/${templateId}/dimensions/`, {
+                // Save dimensions to the database
+                await fetch(`/templates/${templateId}/dimensions/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -585,6 +588,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show form after selection
         inlineFieldForm.classList.remove('hidden');
+        
+        // Fire a custom event to notify that selection is complete
+        document.dispatchEvent(new CustomEvent('selectionComplete', { 
+            detail: { 
+                selection: normalizedSelection,
+                page: currentPage
+            }
+        }));
         
         // Turn off selecting mode
         isSelecting = false;

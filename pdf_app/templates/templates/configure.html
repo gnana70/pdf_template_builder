@@ -108,6 +108,23 @@
         color: #374151;
     }
     
+    /* Toggle switch styles */
+    .toggle-checkbox:checked {
+        right: 0;
+        border-color: #68d391;
+    }
+    .toggle-checkbox:checked + .toggle-label {
+        background-color: #68d391;
+    }
+    .toggle-label {
+        transition: background-color 0.3s ease;
+    }
+    .toggle-checkbox {
+        transition: all 0.3s ease;
+        right: 4px;
+        z-index: 5;
+    }
+    
     @keyframes fadeIn {
         from {
             opacity: 0;
@@ -166,6 +183,15 @@
                         <button id="zoom-in" class="p-2 hover:bg-gray-100 focus:outline-none">
                             <i class="fas fa-search-plus"></i>
                         </button>
+                    </div>
+                </div>
+                
+                <div class="ml-4 border-l border-gray-300 pl-4">
+                    <div class="flex items-center">
+                        <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                            <input type="checkbox" id="toggle-overlay" name="toggle-overlay" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
+                            <label for="toggle-overlay" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
                     </div>
                 </div>
                 
@@ -265,7 +291,7 @@
                     
                 <!-- Table functionality controls -->
                 <div class="mb-3">
-                    <div class="flex items-center">
+                    <div class="flex items-center hidden">
                         <input type="checkbox" id="is-table-field" name="is_table" class="form-checkbox">
                         <label for="is-table-field" class="ml-2 block text-sm font-medium text-gray-700">This is a table field</label>
                     </div>
@@ -341,8 +367,8 @@
                                                     <div>
                                                         <label class="block text-sm font-medium text-gray-700">Strategy (Overall)</label>
                                                         <select id="table-strategy" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                                                            <option value="lines" selected>lines</option>
-                                                            <option value="lines_strict">lines_strict</option>
+                                                            <option value="lines">lines</option>
+                                                            <option value="lines_strict" selected>lines_strict</option>
                                                             <option value="text">text</option>
                                                         </select>
                                                         <p class="mt-1 text-xs text-gray-500">Main table detection strategy</p>
@@ -497,6 +523,9 @@
                                 <button type="button" id="close-table-view-btn" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:w-auto sm:text-sm">
                                     Close
                                 </button>
+                                <button type="button" id="download-csv-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm mr-2">
+                                    <i class="fas fa-download mr-1"></i> Download CSV
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -583,6 +612,9 @@
 <script src="{% static 'js/configure_template.js' %}"></script>
 <script src="{% static 'js/configure_template_fields.js' %}"></script>
 <script src="{% static 'js/configure_template_tables.js' %}"></script>
+<script src="{% static 'js/table_field_helper.js' %}"></script>
+{% endblock %}
+
 <script>
     // Add hover effects for the add field button
     document.addEventListener('DOMContentLoaded', function() {
@@ -687,4 +719,80 @@
         });
     });
 </script>
-{% endblock %} 
+
+<body class="flex flex-col min-h-screen font-sans bg-transparent custom-bg">
+    <script>
+        console.log('INLINE SCRIPT - TABLE FIELD DETECTOR');
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM READY - CHECKING FOR TABLE FIELDS');
+            // Run after a delay to ensure all other scripts have loaded
+            setTimeout(function() {
+                const fieldNameInput = document.getElementById('field-name');
+                if (fieldNameInput) {
+                    console.log('Field name dropdown found - checking selection');
+                    const selectedOption = fieldNameInput.options[fieldNameInput.selectedIndex];
+                    if (selectedOption && selectedOption.textContent.toLowerCase().includes('table')) {
+                        console.log('!!!! TABLE FIELD DETECTED IN DROPDOWN !!!!');
+                        // If there's a table field checkbox, check it
+                        const isTableField = document.getElementById('is-table-field');
+                        if (isTableField) {
+                            console.log('Table checkbox found - checking it');
+                            isTableField.checked = true;
+                            // Trigger its change event to update dimensions
+                            const event = new Event('change', { bubbles: true });
+                            isTableField.dispatchEvent(event);
+                        } else {
+                            console.log('Table checkbox not found');
+                        }
+                        
+                        // Set dimensions directly
+                        const fieldXInput = document.getElementById('field-x');
+                        const fieldYInput = document.getElementById('field-y');
+                        const fieldX1Input = document.getElementById('field-x1');
+                        const fieldY1Input = document.getElementById('field-y1');
+                        
+                        if (fieldXInput && fieldYInput && fieldX1Input && fieldY1Input) {
+                            console.log('Setting table dimensions directly');
+                            fieldXInput.value = 0;
+                            fieldYInput.value = 0;
+                            
+                            // Try to get canvas dimensions
+                            const currentPage = parseInt(document.getElementById('field-page').value) || 1;
+                            const currentPageCanvas = document.querySelector(`#page-${currentPage} canvas`);
+                            
+                            if (currentPageCanvas && window.scale) {
+                                const pageWidth = currentPageCanvas.width / window.scale;
+                                const pageHeight = currentPageCanvas.height / window.scale;
+                                console.log(`Using canvas dimensions: ${pageWidth}x${pageHeight}`);
+                                fieldX1Input.value = pageWidth;
+                                fieldY1Input.value = pageHeight;
+                            } else {
+                                console.log('Using default dimensions: 612x792');
+                                fieldX1Input.value = 612;
+                                fieldY1Input.value = 792;
+                            }
+                            
+                            // Trigger change events
+                            fieldXInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            fieldYInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            fieldX1Input.dispatchEvent(new Event('change', { bubbles: true }));
+                            fieldY1Input.dispatchEvent(new Event('change', { bubbles: true }));
+                        } else {
+                            console.log('Field inputs not found');
+                        }
+                    } else {
+                        console.log('No table field selected in dropdown');
+                    }
+                } else {
+                    console.log('Field name dropdown not found');
+                }
+            }, 1000);
+        });
+    </script>
+    <div class="bg-gradient-to-r from-indigo-600 to-blue-600 w-full h-1"></div>
+    <script src="{% static 'js/table_field_helper.js' %}"></script>
+    <script src="{% static 'js/table_field_initializer.js' %}"></script>
+</body>
+</html>
+ 
+ 
